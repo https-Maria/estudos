@@ -135,4 +135,67 @@
     $('#dashPractical').textContent=`${s.practicalRate}%`;$('#dashEvidence').textContent=`${s.evidenceRate}%`;$('#dashClosure').textContent=`${s.closureRate}%`;$('#dashLatency').textContent=s.avgLatency===null?'—':`${s.avgLatency}m`;
     if(s.sessions7===0){$('#heroMessage').textContent='O próximo dado ainda não existe.';$('#heroSub').textContent='Vá em Hoje, bata o ponto e crie a primeira evidência.'}
     else if(s.attendance>=100){$('#heroMessage').textContent='Você compareceu ao que combinou.';$('#heroSub').textContent=`${s.sessions7} sessões nesta semana. Agora olhamos a qualidade da execução.`}
-    else{$('#heroMessage').textContent=`Você já
+    else{$('#heroMessage').textContent=`Você já apareceu ${s.sessions7} vez(es) esta semana.`;$('#heroSub').textContent=`Faltam ${Math.max(0,s.target-s.sessions7)} sessão(ões) para a referência semanal — sem compensar em maratona.`}
+
+    const trend=A.weeklyTrend(sessions,8);const max=Math.max(30,...trend.map(x=>x.minutes));$('#weeklyTrend').innerHTML=trend.map(x=>`<div class="trend-col"><div class="trend-bar-wrap" title="${x.minutes} min"><div class="trend-bar" style="height:${Math.max(2,x.minutes/max*100)}%"></div></div><strong>${x.label}</strong><span>${x.minutes}m</span></div>`).join('');
+    $('#executionFunnel').innerHTML=A.funnel(sessions,evidences,30).map(x=>`<div class="funnel-row"><span>${x.label}</span><div class="funnel-track"><div class="funnel-fill" style="width:${x.rate}%"></div></div><strong>${x.rate}%</strong></div>`).join('');
+    $('#noMoodProof').textContent=s.noMoodPractical;$('#noMoodTitle').textContent=s.noMoodCount?`${s.noMoodSuccessRate}% virou prática`:'Ainda sem dados';$('#noMoodText').textContent=s.noMoodCount?`${s.noMoodCount} sessão(ões) começaram no 💀 nos últimos 30 dias; ${s.noMoodPractical} ainda assim executaram algo.`:'Quando houver sessões no 💀, eu vou medir quantas ainda viraram prática.';
+    renderBars('#areaBreakdown',A.areaBreakdown(sessions,30).map(x=>({label:x.area,value:x.share,text:`${x.minutes}m`})));
+    renderHabitMap();
+    const insights=A.generateInsights(sessions,evidences,competencies,{weeklyTarget:4});renderInsightList('#dashboardInsights',insights.slice(0,3));
+    const cs=A.competencySummary(competencies);$('#competencyMini').innerHTML=cs.map(x=>`<div class="comp-mini-row"><div class="comp-mini-head"><span>${escapeHtml(x.area)}</span><span>${x.progress}% · média ${x.average}</span></div><div class="bar-track"><div class="bar-fill" style="width:${x.progress}%"></div></div></div>`).join('');
+  }
+
+  function renderHabitMap(){
+    const h=A.habitMap(sessions,evidences,365);
+    const monthAt=new Map(h.months.map(m=>[m.week,m.label]));
+    const monthLabels=h.weeks.map((_,i)=>`<span>${monthAt.get(i)||''}</span>`).join('');
+    const columns=h.weeks.map(week=>`<div class="habit-week">${week.map(d=>{
+      const outside=d.inPeriod?'':' outside';
+      const title=d.inPeriod
+        ? `${new Date(d.date+'T12:00:00').toLocaleDateString('pt-BR')}: ${d.sessions} sessão(ões) · ${d.minutes} min · ${d.practical} prática(s) · ${d.evidence} evidência(s)`
+        : '';
+      return `<button class="habit-cell l${d.level}${outside}" type="button" aria-label="${escapeHtml(title)}" data-tip="${escapeHtml(title)}"></button>`;
+    }).join('')}</div>`).join('');
+    $('#activityHeatmap').innerHTML=`
+      <div class="habit-summary">
+        <div><strong>${h.activeDays}</strong><span>dias ativos</span></div>
+        <div><strong>${h.currentStreak}</strong><span>sequência atual</span></div>
+        <div><strong>${h.bestStreak}</strong><span>maior sequência</span></div>
+        <div><strong>${formatMinutes(h.totalMinutes)}</strong><span>tempo no ano</span></div>
+      </div>
+      <div class="habit-scroll">
+        <div class="habit-month-row"><span class="habit-axis-spacer"></span><div class="habit-months">${monthLabels}</div></div>
+        <div class="habit-body">
+          <div class="habit-weekdays"><span>seg</span><span></span><span>qua</span><span></span><span>sex</span><span></span><span>dom</span></div>
+          <div class="habit-weeks">${columns}</div>
+        </div>
+      </div>
+      <div class="habit-footer">
+        <span class="micro-note">Passe o mouse sobre um dia para ver o que aconteceu.</span>
+        <div class="habit-legend"><span>menos</span>${[0,1,2,3,4].map(n=>`<i class="habit-cell l${n}"></i>`).join('')}<span>mais</span></div>
+      </div>`;
+
+    const map=$('#activityHeatmap');
+    let tip=map.querySelector('.habit-tooltip');
+    if(!tip){tip=document.createElement('div');tip.className='habit-tooltip';map.appendChild(tip);}
+    map.querySelectorAll('.habit-cell[data-tip]').forEach(cell=>{
+      const show=(ev)=>{const t=cell.dataset.tip;if(!t)return;tip.textContent=t;tip.classList.add('show');const r=map.getBoundingClientRect();tip.style.left=`${Math.min(Math.max(8,ev.clientX-r.left+10),Math.max(8,r.width-285))}px`;tip.style.top=`${Math.max(8,ev.clientY-r.top-54)}px`;};
+      cell.addEventListener('mousemove',show);cell.addEventListener('mouseenter',show);cell.addEventListener('mouseleave',()=>tip.classList.remove('show'));cell.addEventListener('focus',()=>{tip.textContent=cell.dataset.tip;tip.classList.add('show');tip.style.left='52px';tip.style.top='90px'});cell.addEventListener('blur',()=>tip.classList.remove('show'));
+    });
+  }
+
+  function renderInsights(){
+    const insights=A.generateInsights(sessions,evidences,competencies,{weeklyTarget:4});renderInsightList('#allInsights',insights);
+    renderBars('#moodBreakdown',A.moodBreakdown(sessions,30).map(x=>({label:x.label,value:x.rate,text:`${x.practical}/${x.sessions}`})));
+    renderBars('#durationBreakdown',A.durationBuckets(sessions,60).map(x=>({label:x.label,value:x.rate,text:`${x.sessions} sess.`})));
+    const lat=A.latencyDistribution(sessions,60);const max=Math.max(1,...lat.map(x=>x.count));renderBars('#latencyBreakdown',lat.map(x=>({label:x.label,value:Math.round(x.count/max*100),text:String(x.count)})));
+  }
+
+  function renderInsightList(sel,items){$(sel).innerHTML=items.length?items.map(x=>`<div class="insight ${x.tone||'neutral'}"><h4>${escapeHtml(x.title)}</h4><p>${escapeHtml(x.text)}</p></div>`).join(''):'<div class="micro-note">Ainda não há dados suficientes para formar um padrão.</div>'}
+  function renderBars(sel,rows){$(sel).innerHTML=rows.map(x=>`<div class="bar-row"><span class="label">${escapeHtml(x.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(0,Math.min(100,x.value||0))}%"></div></div><span class="value">${escapeHtml(x.text??`${x.value}%`)}</span></div>`).join('')}
+
+  function renderSkills(){
+    const summary=A.competencySummary(competencies);$('#skillSummaryCards').innerHTML=summary.map(x=>`<div class="stat-card"><span>${escapeHtml(x.area)}</span><strong>${x.progress}%</strong><small>${x.autonomous} autônoma(s) · ${x.untouched} ainda em zero</small></div>`).join('');
+    const grouped={};competencies.forEach(s=>(grouped[s.area]??=[]).push(s));
+    $('#skillsGrid').innerHTML=Object.entries(grouped).map(([area,skills])=>`<div class="skill-group"><div class="eyebrow">${escapeHtml(area)}</div><h3>${skills.length} competências</h3>${skills.map(s=>`<div class="
