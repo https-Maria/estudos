@@ -1,3 +1,167 @@
-# Estudos
+# FEZ OU NÃO FEZ — painel de acompanhamento v2
 
-Painel de acompanhamento de estudos.
+Painel pessoal de estudos para **GitHub Pages + Supabase**. A proposta é medir execução real sem transformar organização em uma segunda atividade de procrastinação.
+
+## O que o painel acompanha
+
+### Hoje
+- bater ponto / encerrar sessão;
+- área: DBA/DP-300, AWS/Data Lake ou Inglês;
+- ação concreta da sessão;
+- humor antes de começar: 😄 / 😐 / 💀;
+- horário que você pretendia começar (opcional);
+- latência entre horário planejado e início real;
+- prática realizada;
+- evidência do que passou a existir;
+- fechamento em 3 linhas: aprendi, dúvida, próximo.
+
+### Painel executivo
+- sessões nos últimos 7 dias;
+- meta de comparecimento semanal;
+- tempo real estudado;
+- comparação com os 7 dias anteriores;
+- taxa de prática;
+- taxa de evidência;
+- taxa de fechamento;
+- latência média de início;
+- funil: sessão → prática → evidência → fechamento;
+- 8 semanas de ritmo;
+- distribuição de tempo por frente;
+- mapa anual de hábito estilo GitHub (365 dias), com intensidade por execução, tooltip diário, sequência atual, maior sequência, dias ativos e tempo acumulado;
+- prova de sessões que começaram em “💀 não” e ainda assim viraram execução;
+- resumo de evolução das competências.
+
+### Insights automáticos
+O sistema usa regras simples e transparentes para apontar padrões, por exemplo:
+- “você não precisa estar com vontade”;
+- latência média para começar;
+- ponto sem prática;
+- prática sem evidência;
+- ausência de descanso;
+- concentração excessiva em uma frente;
+- tamanho de sessão que mais vira prática;
+- melhor janela de horário observada;
+- competências que já chegaram a autonomia.
+
+Os insights esperam amostra mínima quando necessário e evitam tratar pouca informação como verdade.
+
+## Estrutura
+
+```text
+estudo-ponto/
+├── index.html
+├── styles.css
+├── app.js
+├── analytics.js
+├── config.js
+├── config.example.js
+├── supabase.sql
+├── supabase_v2_migration.sql
+├── demo.html
+└── tests/
+    └── analytics.test.js
+```
+
+## Instalação nova no Supabase
+
+1. Crie um projeto no Supabase.
+2. Abra **SQL Editor**.
+3. Cole e execute `supabase.sql`.
+4. Em Authentication, mantenha Email/Password habilitado.
+5. Crie a conta pela própria página do app.
+
+O script habilita **Row Level Security (RLS)**. Cada usuário autenticado só pode consultar e alterar as próprias linhas.
+
+## Se você já rodou a versão anterior
+
+Execute apenas:
+
+`supabase_v2_migration.sql`
+
+Ele adiciona os campos de horário planejado e latência e os índices novos sem destruir os dados existentes.
+
+## Configurar o front
+
+Copie `config.example.js` para `config.js` e preencha:
+
+```js
+window.APP_CONFIG = {
+  SUPABASE_URL: "https://SEU-PROJETO.supabase.co",
+  SUPABASE_ANON_KEY: "SUA_CHAVE_PUBLICA"
+};
+```
+
+Use somente **anon key / publishable key**. Nunca coloque `service_role` em GitHub Pages.
+
+## Modo demonstração
+
+Para abrir com dados fictícios sem Supabase:
+
+```text
+demo.html?demo=1
+```
+
+O modo demo existe para desenvolvimento e validação visual.
+
+## Rodar localmente
+
+```bash
+python -m http.server 8000
+```
+
+Abra:
+
+```text
+http://localhost:8000/?demo=1
+```
+
+ou, com Supabase configurado:
+
+```text
+http://localhost:8000/
+```
+
+## Testes
+
+Os cálculos do dashboard foram isolados em `analytics.js`, para que possam ser testados sem interface ou Supabase.
+
+```bash
+node tests/analytics.test.js
+```
+
+Os testes cobrem resumo semanal, minutos, comparecimento, prática, evidência, fechamento, latência, humor, funil, áreas, competências, mapa anual de hábito/streaks, heatmap legado, tendência semanal e geração de insights.
+
+## GitHub Pages
+
+Suba os arquivos na raiz do repositório e configure:
+
+**Settings → Pages → Build and deployment → Deploy from a branch → main / root**
+
+## Regra do produto
+
+O dashboard não vale como estudo.
+
+Uma sessão só ganha valor quando você:
+1. bate o ponto;
+2. executa alguma coisa;
+3. deixa uma evidência;
+4. fecha em três linhas.
+
+## Mapa anual de hábito (V3)
+
+O painel mostra aproximadamente 1 ano de atividade em quadradinhos, no estilo GitHub Contributions. Cada quadrado representa um dia:
+
+- vazio: nenhuma sessão concluída;
+- nível 1: até 15 min;
+- nível 2: 16–30 min;
+- nível 3: 31–60 min;
+- nível 4: mais de 60 min.
+
+Ao passar o mouse, o painel mostra sessões, minutos, práticas e evidências daquele dia. Também calcula:
+
+- dias ativos no período;
+- sequência atual;
+- maior sequência;
+- tempo total acumulado no ano.
+
+O app busca 370 dias de sessões/evidências do Supabase para que o mapa anual seja completo. Nenhuma migração de banco é necessária para a V3.
