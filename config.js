@@ -1,7 +1,7 @@
-// Copie este arquivo como config.js e preencha APENAS com dados públicos.
-// Nunca coloque service_role key no GitHub Pages.
+// Configuração pública do Supabase.
+// Nunca coloque service_role ou sb_secret_* neste arquivo.
 
 window.APP_CONFIG = {
-  SUPABASE_URL: "https://SEU-PROJETO.supabase.co",
-  SUPABASE_ANON_KEY: "SUA_CHAVE_PUBLICA_ANON_OU_PUBLISHABLE"
+  SUPABASE_URL: "https://gnkpkmqvbdcqinzvkdoe.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_Hw_Fbbp_X6s2SQVs4Rw0Uw_7mF4s7FC"
 };
