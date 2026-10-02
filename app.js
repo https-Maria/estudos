@@ -198,4 +198,37 @@
   function renderSkills(){
     const summary=A.competencySummary(competencies);$('#skillSummaryCards').innerHTML=summary.map(x=>`<div class="stat-card"><span>${escapeHtml(x.area)}</span><strong>${x.progress}%</strong><small>${x.autonomous} autônoma(s) · ${x.untouched} ainda em zero</small></div>`).join('');
     const grouped={};competencies.forEach(s=>(grouped[s.area]??=[]).push(s));
-    $('#skillsGrid').innerHTML=Object.entries(grouped).map(([area,skills])=>`<div class="skill-group"><div class="eyebrow">${escapeHtml(area)}</div><h3>${skills.length} competências</h3>${skills.map(s=>`<div class="
+    $('#skillsGrid').innerHTML=Object.entries(grouped).map(([area,skills])=>`<div class="skill-group"><div class="eyebrow">${escapeHtml(area)}</div><h3>${skills.length} competências</h3>${skills.map(s=>`<div class="skill-row"><span>${escapeHtml(s.name)}</span><div class="level-buttons">${[0,1,2,3,4,5].map(n=>`<button class="${n===Number(s.level)?'active':''}" data-skill="${s.id}" data-level="${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>`).join('');
+    $$('#skillsGrid [data-skill]').forEach(btn=>btn.onclick=async()=>{await store.updateCompetency(btn.dataset.skill,Number(btn.dataset.level));await refreshData()});
+  }
+
+  function renderHistory(){
+    const rows=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,60);
+    $('#historyList').innerHTML=`<div class="history-head"><span>Data</span><span>Área</span><span>Tarefa</span><span>Tempo</span><span>Humor</span><span>Prática</span></div>`+(rows.length?rows.map(s=>`<div class="history-row"><span>${new Date(s.started_at).toLocaleDateString('pt-BR')}</span><span>${escapeHtml(s.area)}</span><span>${escapeHtml(s.task_title||'sessão')}</span><span>${A.minutes(s)}m</span><span class="mood-cell">${moodIcon(s.mood)}</span><span class="${s.practical_done?'ok':'no'}">${s.practical_done?'sim':'não'}</span></div>`).join(''):'<div class="micro-note">Ainda não há sessões encerradas.</div>')
+  }
+
+  function renderParking(){
+    $('#parkingList').innerHTML=parking.length?parking.map(x=>`<div class="parking-item"><span>${escapeHtml(x.topic)}</span><button data-delete-parking="${x.id}">×</button></div>`).join(''):'<div class="micro-note">Nada estacionado. Ótimo.</div>';
+    $$('[data-delete-parking]').forEach(btn=>btn.onclick=async()=>{await store.deleteParking(btn.dataset.deleteParking);await refreshData()})
+  }
+
+  $$('.tab').forEach(btn=>btn.addEventListener('click',()=>{$$('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');authMode=btn.dataset.authTab;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#authMessage').textContent=''}));
+  $('#authForm').addEventListener('submit',async e=>{e.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;$('#authMessage').textContent='processando...';try{const result=authMode==='signin'?await store.signIn(email,password):await store.signUp(email,password);if(result?.user)await enterApp(result.user);else $('#authMessage').textContent='Conta criada. Se a confirmação de email estiver ativa, confirme antes de entrar.'}catch(err){$('#authMessage').textContent=err.message}});
+  $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.view));$('#goTodayBtn').onclick=()=>switchView('today');$$('[data-jump]').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.jump));
+  $$('.area-btn').forEach(btn=>btn.onclick=()=>{selectedArea=btn.dataset.area;$$('.area-btn').forEach(x=>x.classList.toggle('active',x===btn));$('#areaBadge').textContent=selectedArea});
+  $$('.mood').forEach(btn=>btn.onclick=()=>{selectedMood=btn.dataset.mood;$$('.mood').forEach(x=>x.classList.toggle('selected',x===btn))});
+
+  $('#startSessionBtn').onclick=async()=>{
+    selectedMood ||= 'mais-ou-menos';const now=new Date();let planned=null,latency=null;const time=$('#plannedStartTime').value;
+    if(time){const [h,m]=time.split(':').map(Number);planned=new Date(now);planned.setHours(h,m,0,0);latency=Math.max(0,Math.round((now-planned)/60000))}
+    try{currentSession=await store.insertSession({user_id:uid(),area:selectedArea,task_title:$('#taskTitleInput').value.trim()||'Sessão de estudo',started_at:now.toISOString(),planned_start_at:planned?.toISOString()||null,start_latency_minutes:latency,mood:selectedMood,practical_done:false});await refreshData()}catch(err){alert(err.message)}
+  };
+  $('#finishSessionBtn').onclick=()=>$('#finishDialog').showModal();
+  $('#confirmFinishBtn').onclick=async e=>{e.preventDefault();if(!currentSession)return;const finished=new Date().toISOString();try{await store.updateSession(currentSession.id,{finished_at:finished,duration_minutes:minutesBetween(currentSession.started_at,finished),practical_done:$('#didPractical').checked,notes:$('#sessionNotes').value.trim()});$('#finishDialog').close();$('#didPractical').checked=false;$('#sessionNotes').value='';currentSession=null;await refreshData()}catch(err){alert(err.message)}};
+
+  $('#evidenceForm').addEventListener('submit',async e=>{e.preventDefault();const description=$('#evidenceText').value.trim();if(!description)return;const todaySessions=sessions.filter(s=>A.key(s.started_at)===todayKey());const target=currentSession||todaySessions[todaySessions.length-1];try{await store.insertEvidence({user_id:uid(),session_id:target?.id||null,area:target?.area||selectedArea,description});$('#evidenceText').value='';await refreshData()}catch(err){alert(err.message)}});
+  $('#saveClosureBtn').onclick=async()=>{const learned=$('#learnedInput').value.trim(),doubt=$('#doubtInput').value.trim(),next=$('#nextInput').value.trim();if(!learned&&!doubt&&!next)return;const todaySessions=sessions.filter(s=>A.key(s.started_at)===todayKey());const target=currentSession||todaySessions[todaySessions.length-1];if(!target){alert('Bata o ponto primeiro. Fechamento sem sessão não conta.');return}try{await store.updateSession(target.id,{learned,doubt,next_action:next});$('#learnedInput').value=$('#doubtInput').value=$('#nextInput').value='';await refreshData()}catch(err){alert(err.message)}};
+  $('#parkingForm').addEventListener('submit',async e=>{e.preventDefault();const topic=$('#parkingInput').value.trim();if(!topic)return;await store.insertParking(topic);$('#parkingInput').value='';await refreshData()});
+
+  boot().catch(err=>{console.error(err);alert(`Erro ao iniciar: ${err.message}`)});
+})();
