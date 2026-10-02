@@ -1,0 +1,8 @@
+{
+  "name": "fez-ou-nao-fez",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/analytics.test.js"
+  }
+}
