@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>Fez ou não fez — Painel de estudo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+
+  <section id="authView" class="auth-shell">
+    <div class="auth-card">
+      <div class="eyebrow">FEZ OU NÃO FEZ</div>
+      <h1>Seu estudo começa no ponto.</h1>
+      <p class="muted">O painel mede execução, não intenção. Entre, bata o ponto e deixe uma evidência.</p>
+      <div class="auth-tabs">
+        <button class="tab active" data-auth-tab="signin">Entrar</button>
+        <button class="tab" data-auth-tab="signup">Criar conta</button>
+      </div>
+      <form id="authForm" class="stack">
+        <label><span>Email</span><input id="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
+        <label><span>Senha</span><input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="••••••••"></label>
+        <button id="authSubmit" class="primary big" type="submit">Entrar</button>
+      </form>
+      <p id="authMessage" class="status"></p>
+      <div class="micro-note">Use somente a chave pública do Supabase no front. O RLS protege seus dados.</div>
+    </div>
+  </section>
+
+  <div id="appView" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <div><strong>FEZ OU NÃO FEZ</strong><span>execução &gt; intenção</span></div>
+      </div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard">Painel</button>
+        <button class="nav-item" data-view="today">Hoje</button>
+        <button class="nav-item" data-view="insights">Insights</button>
+        <button class="nav-item" data-view="skills">Competências</button>
+        <button class="nav-item" data-view="history">Histórico</button>
+        <button class="nav-item" data-view="parking">Estacionamento</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="mini-rule"><strong>Regra</strong><span>organização só vale depois de execução.</span></div>
+        <button id="logoutBtn" class="ghost">Sair</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><div id="dateLabel" class="eyebrow"></div><h2 id="viewTitle">Painel</h2></div>
+        <div class="top-actions"><div id="sessionChip" class="session-chip idle">sem sessão ativa</div><button id="goTodayBtn" class="primary small">COMEÇAR</button></div>
+      </header>
+
+      <section id="dashboardView" class="view">
+        <div class="baseline compact-baseline"><span>BASELINE</span><p>Eu planejo, organizo e estudo sobre estudar, mas ainda não tenho consistência de execução. A partir de agora, eu meço o que fiz.</p></div>
+
+        <div class="hero-dashboard card">
+          <div>
+            <div class="eyebrow">ESTA SEMANA</div>
+            <h3 id="heroMessage">Construindo o baseline.</h3>
+            <p id="heroSub" class="muted">O objetivo é comparecer, executar e deixar evidência.</p>
+          </div>
+          <div class="attendance-ring" id="attendanceRing"><strong id="attendanceValue">0%</strong><span>comparecimento</span></div>
+        </div>
+
+        <div class="stats-grid six">
+          <div class="stat-card"><span>Sessões</span><strong id="dashSessions">0</strong><small id="dashSessionsDelta">meta 4</small></div>
+          <div class="stat-card"><span>Tempo real</span><strong id="dashTime">0m</strong><small id="dashTimeDelta">vs. semana anterior</small></div>
+          <div class="stat-card"><span>Prática</span><strong id="dashPractical">0%</strong><small>sessões que executaram algo</small></div>
+          <div class="stat-card"><span>Evidência</span><strong id="dashEvidence">0%</strong><small>sessões com prova do que foi feito</small></div>
+          <div class="stat-card"><span>Fechamento</span><strong id="dashClosure">0%</strong><small>aprendi / dúvida / próximo</small></div>
+          <div class="stat-card"><span>Latência</span><strong id="dashLatency">—</strong><small>planejado → começo real</small></div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="card span-2">
+            <div class="card-head"><div><div class="eyebrow">8 SEMANAS</div><h3>Ritmo real</h3></div><span class="micro-note">minutos por semana</span></div>
+            <div id="weeklyTrend" class="trend-chart"></div>
+          </article>
+          <article class="card">
+            <div class="eyebrow">FUNIL DE EXECUÇÃO</div>
+            <h3>Começar não basta</h3>
+            <div id="executionFunnel" class="funnel"></div>
+          </article>
+          <article class="card">
+            <div class="eyebrow">SEM VONTADE</div>
+            <h3 id="noMoodTitle">Ainda sem dados</h3>
+            <p id="noMoodText" class="muted">Quando houver sessões no 💀, eu vou medir quantas ainda viraram prática.</p>
+            <div class="proof-number" id="noMoodProof">0</div>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="card">
+            <div class="card-head"><div><div class="eyebrow">30 DIAS</div><h3>Energia por frente</h3></div></div>
+            <div id="areaBreakdown" class="bar-list"></div>
+          </article>
+          <article class="card span-2 habit-card">
+            <div class="card-head"><div><div class="eyebrow">1 ANO</div><h3>Mapa de hábito</h3></div><span class="micro-note">cada quadrado = 1 dia · mais forte = mais execução</span></div>
+            <div id="activityHeatmap" class="habit-map"></div>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="card span-2">
+            <div class="card-head"><div><div class="eyebrow">INSIGHTS AUTOMÁTICOS</div><h3>O que os seus dados estão dizendo</h3></div><button class="ghost small" data-jump="insights">ver todos</button></div>
+            <div id="dashboardInsights" class="insight-list"></div>
+          </article>
+          <article class="card">
+            <div class="eyebrow">COMPETÊNCIAS</div><h3>O que já não é mais “zero”</h3>
+            <div id="competencyMini" class="competency-mini"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="todayView" class="view hidden">
+        <div class="today-grid">
+          <article class="card hero-card">
+            <div class="card-head"><div><div class="eyebrow">PRÓXIMA AÇÃO</div><h3>Uma coisa. Agora.</h3></div><span id="areaBadge" class="badge">DBA / DP-300</span></div>
+
+            <div class="area-switch" id="areaSwitch">
+              <button class="area-btn active" data-area="DBA / DP-300">DBA / DP-300</button>
+              <button class="area-btn" data-area="AWS / Data Lake">AWS / Data Lake</button>
+              <button class="area-btn" data-area="Inglês">Inglês</button>
+            </div>
+
+            <label class="task-input-wrap"><span>Ação concreta</span><input id="taskTitleInput" value="Abrir o SSMS e consultar sys.databases"></label>
+
+            <div class="start-plan-row">
+              <label><span>Eu pretendia começar às (opcional)</span><input id="plannedStartTime" type="time"></label>
+              <div><span class="field-label">Queria começar?</span><div class="mood-buttons">
+                <button class="mood" data-mood="sim">😄 sim</button>
+                <button class="mood" data-mood="mais-ou-menos">😐 mais ou menos</button>
+                <button class="mood" data-mood="nao">💀 não</button>
+              </div></div>
+            </div>
+
+            <div class="punch-area">
+              <button id="startSessionBtn" class="primary punch">BATER PONTO</button>
+              <div id="runningPanel" class="running hidden"><div><div class="timer-label">sessão em andamento</div><div id="timer" class="timer">00:00:00</div></div><button id="finishSessionBtn" class="danger">ENCERRAR</button></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="eyebrow">PLACAR DE HOJE</div>
+            <div class="checklist" id="dailyChecklist">
+              <div><span class="check" data-check="opened">○</span><span>Abri a ferramenta</span></div>
+              <div><span class="check" data-check="practical">○</span><span>Fiz 1 tarefa prática</span></div>
+              <div><span class="check" data-check="evidence">○</span><span>Produzi 1 evidência</span></div>
+              <div><span class="check" data-check="logged">○</span><span>Registrei em 3 linhas</span></div>
+            </div>
+            <div class="rule-box"><strong>Não conta:</strong><span>arrumar Notion, escolher curso, redesenhar cronograma.</span></div>
+          </article>
+        </div>
+
+        <div class="today-grid bottom-grid">
+          <article class="card"><div class="eyebrow">EVIDÊNCIA</div><h3>O que passou a existir?</h3><form id="evidenceForm" class="stack compact"><textarea id="evidenceText" rows="4" placeholder="Ex.: rodei sys.databases e identifiquei master, model, msdb e tempdb."></textarea><button class="secondary" type="submit">Salvar evidência</button></form><div id="evidenceList" class="evidence-list"></div></article>
+          <article class="card"><div class="eyebrow">FECHAMENTO</div><h3>Três linhas. Só.</h3><div class="three-lines"><label>Aprendi <input id="learnedInput" placeholder="o que ficou claro hoje"></label><label>Dúvida <input id="doubtInput" placeholder="o que ainda preciso entender"></label><label>Próximo <input id="nextInput" placeholder="a primeira ação da próxima sessão"></label></div><button id="saveClosureBtn" class="secondary">Salvar fechamento</button></article>
+        </div>
+      </section>
+
+      <section id="insightsView" class="view hidden">
+        <div class="section-intro"><div><div class="eyebrow">PADRÕES, NÃO JULGAMENTO</div><h3>O que ajuda você a começar e continuar</h3></div><p>Os insights só aparecem quando há dados suficientes. Pouca amostra fica marcada como observação, não como verdade.</p></div>
+        <div id="allInsights" class="insight-list large"></div>
+        <div class="dashboard-grid">
+          <article class="card"><div class="eyebrow">HUMOR → PRÁTICA</div><h3>Motivação é necessária?</h3><div id="moodBreakdown" class="bar-list"></div></article>
+          <article class="card"><div class="eyebrow">DURAÇÃO</div><h3>Qual bloco funciona melhor?</h3><div id="durationBreakdown" class="bar-list"></div></article>
+          <article class="card"><div class="eyebrow">LATÊNCIA</div><h3>Quanto demora para começar?</h3><div id="latencyBreakdown" class="bar-list"></div></article>
+        </div>
+      </section>
+
+      <section id="skillsView" class="view hidden">
+        <div class="skills-intro"><div><div class="eyebrow">MAPA GRANDE</div><h3>Você só olha aqui. Não mora aqui.</h3></div><p>0 não conheço · 1 reconheço · 2 entendo · 3 faço com ajuda · 4 faço sozinha · 5 investigo/ensino</p></div>
+        <div id="skillSummaryCards" class="stats-grid"></div>
+        <div id="skillsGrid" class="skills-grid"></div>
+      </section>
+
+      <section id="historyView" class="view hidden">
+        <div class="section-intro"><div><div class="eyebrow">HISTÓRICO</div><h3>Fatos, não sensação</h3></div><p>Últimas sessões registradas, com tempo, área, humor e execução.</p></div>
+        <article class="card"><div id="historyList" class="history-list"></div></article>
+      </section>
+
+      <section id="parkingView" class="view hidden">
+        <article class="card"><div class="card-head"><div><div class="eyebrow">ESTACIONAMENTO</div><h3>Interessante não significa urgente.</h3></div></div><form id="parkingForm" class="inline-form"><input id="parkingInput" placeholder="Ex.: Kubernetes, Oracle, Databricks..." /><button class="secondary" type="submit">Estacionar</button></form><div id="parkingList" class="parking-list"></div></article>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="finishDialog">
+    <form method="dialog" class="dialog-card" id="finishForm">
+      <div class="eyebrow">ENCERRAR SESSÃO</div><h3>Fez ou não fez?</h3>
+      <label class="toggle-line"><input type="checkbox" id="didPractical"><span>Fiz pelo menos uma tarefa prática.</span></label>
+      <label><span>Observação rápida</span><textarea id="sessionNotes" rows="3" placeholder="Ex.: quase não comecei, mas depois fluiu."></textarea></label>
+      <div class="dialog-actions"><button value="cancel" class="ghost">Cancelar</button><button id="confirmFinishBtn" value="default" class="primary">Salvar sessão</button></div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <script src="./analytics.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
