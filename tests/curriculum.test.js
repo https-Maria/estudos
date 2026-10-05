@@ -22,7 +22,7 @@ for(const track of C.tracks){
 
 const comps=[
   {area:'DBA / DP-300',name:'Fundamentos SQL Server',level:5},
-  {area:'DBA / DP-300',name:'Índices',level:2}
+  {area:'DBA / DP-300',name:'Transações',level:2}
 ];
 const dba=C.getTrack('dba');
 assert.equal(C.moduleProgress(dba.modules[0],dba,comps),100);
