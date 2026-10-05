@@ -36,13 +36,14 @@
         <div><strong>FEZ OU NÃO FEZ</strong><span>execução &gt; intenção</span></div>
       </div>
       <nav>
-        <button class="nav-item active" data-view="dashboard">Painel</button>
-        <button class="nav-item" data-view="journey">Jornada</button>
+        <button class="nav-item active" data-view="dashboard">Início</button>
         <button class="nav-item" data-view="today">Hoje</button>
+        <button class="nav-item track-nav dba-nav" data-track="dba">DBA + DP-300</button>
+        <button class="nav-item track-nav aws-nav" data-track="aws">AWS / Data Lake</button>
+        <button class="nav-item track-nav english-nav" data-track="english">Inglês</button>
         <button class="nav-item" data-view="insights">Insights</button>
-        <button class="nav-item" data-view="skills">Competências</button>
         <button class="nav-item" data-view="history">Histórico</button>
-        <button class="nav-item" data-view="parking">Estacionamento</button>
+        <button class="nav-item" data-view="parking">Depois</button>
       </nav>
       <div class="sidebar-bottom">
         <div class="mini-rule"><strong>Regra</strong><span>organização só vale depois de execução.</span></div>
@@ -56,80 +57,76 @@
         <div class="top-actions"><div id="sessionChip" class="session-chip idle">sem sessão ativa</div><button id="goTodayBtn" class="primary small">COMEÇAR</button></div>
       </header>
 
-      <section id="dashboardView" class="view">
-        <div class="baseline compact-baseline"><span>BASELINE</span><p>Eu planejo, organizo e estudo sobre estudar, mas ainda não tenho consistência de execução. A partir de agora, eu meço o que fiz.</p></div>
-
-        <article class="card journey-snapshot" id="journeySnapshot">
-          <div class="journey-snapshot-main">
-            <div class="eyebrow">JORNADA DE 12 SEMANAS</div>
-            <h3 id="journeySnapshotTitle">Semana 1 · Entender o território</h3>
-            <p id="journeySnapshotText" class="muted">DBA + AWS + Inglês andando juntos, com uma evidência concreta por semana.</p>
-            <div class="journey-progress-line"><div id="journeySnapshotBar"></div></div>
+      <section id="dashboardView" class="view home-view">
+        <div class="home-welcome">
+          <div>
+            <div class="eyebrow">SUA JORNADA</div>
+            <h2>O que importa é saber <em>o que fazer agora</em> e ver o caminho inteiro.</h2>
           </div>
-          <div class="journey-snapshot-side">
-            <strong id="journeyOverall">0%</strong>
-            <span>jornada construída</span>
-            <button class="secondary small" data-jump="journey">ABRIR JORNADA</button>
+          <div class="home-mini-score">
+            <strong id="homeActiveDays">0</strong>
+            <span>dias de estudo no ano</span>
+          </div>
+        </div>
+
+        <article class="home-today card">
+          <div class="home-today-copy">
+            <div class="eyebrow">HOJE · PRÓXIMA MISSÃO</div>
+            <div class="home-today-line">
+              <span id="homeTodayArea" class="track-pill dba">DBA + DP-300</span>
+              <span id="homeTodayModule" class="muted">Fundamentos internos</span>
+            </div>
+            <h3 id="homeTodayTitle">Abrir o SSMS e consultar sys.databases.</h3>
+            <p id="homeTodayEvidence">Evidência: query salva + explicação curta.</p>
+          </div>
+          <div class="home-today-actions">
+            <button id="homeStartBtn" class="primary home-start">COMEÇAR AGORA</button>
+            <span id="homeTodayProgress">0% deste módulo</span>
           </div>
         </article>
 
-        <div class="hero-dashboard card">
-          <div>
-            <div class="eyebrow">ESTA SEMANA</div>
-            <h3 id="heroMessage">Construindo o baseline.</h3>
-            <p id="heroSub" class="muted">O objetivo é comparecer, executar e deixar evidência.</p>
+        <section class="home-section">
+          <div class="home-section-head">
+            <div><div class="eyebrow">MINHAS 3 TRILHAS</div><h3>Estudos separados. Progresso visível.</h3></div>
+            <span class="micro-note">clique em uma trilha para ver todos os conteúdos</span>
           </div>
-          <div class="attendance-ring" id="attendanceRing"><strong id="attendanceValue">0%</strong><span>comparecimento</span></div>
-        </div>
+          <div id="homeTracks" class="track-cards"></div>
+        </section>
 
-        <div class="stats-grid six">
-          <div class="stat-card"><span>Sessões</span><strong id="dashSessions">0</strong><small id="dashSessionsDelta">meta 4</small></div>
-          <div class="stat-card"><span>Tempo real</span><strong id="dashTime">0m</strong><small id="dashTimeDelta">vs. semana anterior</small></div>
-          <div class="stat-card"><span>Prática</span><strong id="dashPractical">0%</strong><small>sessões que executaram algo</small></div>
-          <div class="stat-card"><span>Evidência</span><strong id="dashEvidence">0%</strong><small>sessões com prova do que foi feito</small></div>
-          <div class="stat-card"><span>Fechamento</span><strong id="dashClosure">0%</strong><small>aprendi / dúvida / próximo</small></div>
-          <div class="stat-card"><span>Latência</span><strong id="dashLatency">—</strong><small>planejado → começo real</small></div>
-        </div>
-
-        <div class="dashboard-grid">
-          <article class="card span-2">
-            <div class="card-head"><div><div class="eyebrow">8 SEMANAS</div><h3>Ritmo real</h3></div><span class="micro-note">minutos por semana</span></div>
-            <div id="weeklyTrend" class="trend-chart"></div>
-          </article>
-          <article class="card">
-            <div class="eyebrow">FUNIL DE EXECUÇÃO</div>
-            <h3>Começar não basta</h3>
-            <div id="executionFunnel" class="funnel"></div>
-          </article>
-          <article class="card">
-            <div class="eyebrow">SEM VONTADE</div>
-            <h3 id="noMoodTitle">Ainda sem dados</h3>
-            <p id="noMoodText" class="muted">Quando houver sessões no 💀, eu vou medir quantas ainda viraram prática.</p>
-            <div class="proof-number" id="noMoodProof">0</div>
-          </article>
-        </div>
-
-        <div class="dashboard-grid">
-          <article class="card">
-            <div class="card-head"><div><div class="eyebrow">30 DIAS</div><h3>Energia por frente</h3></div></div>
-            <div id="areaBreakdown" class="bar-list"></div>
-          </article>
-          <article class="card span-2 habit-card">
-            <div class="card-head"><div><div class="eyebrow">1 ANO</div><h3>Mapa de hábito</h3></div><span class="micro-note">cada quadrado = 1 dia · mais forte = mais execução</span></div>
+        <section class="home-section">
+          <div class="home-section-head">
+            <div><div class="eyebrow">MAPA DE HÁBITO</div><h3>Você está aparecendo?</h3></div>
+            <div class="home-habit-kpis">
+              <span><strong id="homeCurrentStreak">0</strong> sequência</span>
+              <span><strong id="homeBestStreak">0</strong> melhor</span>
+              <span><strong id="homeYearTime">0m</strong> no ano</span>
+            </div>
+          </div>
+          <article class="card habit-card home-habit-card">
             <div id="activityHeatmap" class="habit-map"></div>
           </article>
-        </div>
+        </section>
 
-        <div class="dashboard-grid">
-          <article class="card span-2">
-            <div class="card-head"><div><div class="eyebrow">INSIGHTS AUTOMÁTICOS</div><h3>O que os seus dados estão dizendo</h3></div><button class="ghost small" data-jump="insights">ver todos</button></div>
-            <div id="dashboardInsights" class="insight-list"></div>
-          </article>
-          <article class="card">
-            <div class="eyebrow">COMPETÊNCIAS</div><h3>O que já não é mais “zero”</h3>
-            <div id="competencyMini" class="competency-mini"></div>
-          </article>
-        </div>
+        <section class="home-section">
+          <div class="home-section-head">
+            <div><div class="eyebrow">JORNADA · 12 SEMANAS</div><h3>O mapa inteiro, sem textão.</h3></div>
+            <span class="micro-note">cada semana = 1 foco de cada trilha</span>
+          </div>
+          <div id="homeJourney" class="home-journey"></div>
+        </section>
+
+        <section class="home-section home-facts">
+          <div class="home-section-head">
+            <div><div class="eyebrow">ESTA SEMANA</div><h3>Fatos, não culpa.</h3></div>
+            <button class="ghost small" data-jump="insights">VER INSIGHTS</button>
+          </div>
+          <div class="home-facts-grid">
+            <div><span>Sessões</span><strong id="dashSessions">0</strong></div>
+            <div><span>Tempo real</span><strong id="dashTime">0m</strong></div>
+            <div><span>Prática</span><strong id="dashPractical">0%</strong></div>
+            <div><span>Comparecimento</span><strong id="attendanceValue">0%</strong></div>
+          </div>
+        </section>
       </section>
 
       <section id="journeyView" class="view hidden">
@@ -166,6 +163,27 @@
         </div>
 
         <div id="journeyTimeline" class="journey-timeline"></div>
+      </section>
+
+      <section id="trackView" class="view hidden">
+        <div class="track-page-hero">
+          <div>
+            <div id="trackSourceChips" class="source-chips"></div>
+            <div id="trackEyebrow" class="eyebrow">TRILHA</div>
+            <h2 id="trackTitle">DBA + DP-300</h2>
+            <p id="trackDescription"></p>
+          </div>
+          <div class="track-page-progress">
+            <strong id="trackProgress">0%</strong>
+            <span>da trilha construída</span>
+          </div>
+        </div>
+        <div id="trackNow" class="track-now card"></div>
+        <div class="skill-tree-head">
+          <div><div class="eyebrow">SKILL TREE</div><h3>Conteúdo → missão → evidência.</h3></div>
+          <span class="micro-note">● feito · ◐ atual · ○ próximo</span>
+        </div>
+        <div id="trackModules" class="track-modules"></div>
       </section>
 
       <section id="todayView" class="view hidden">
@@ -253,6 +271,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./analytics.js"></script>
+  <script src="./curriculum.js"></script>
   <script src="./roadmap.js"></script>
   <script src="./app.js"></script>
 </body>
