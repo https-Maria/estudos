@@ -1,242 +1,340 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0d1117" />
-  <title>Fez ou não fez — Painel de estudo</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d0e">
+  <meta name="description" content="FORGE — Career RPG OS para estudos técnicos">
+  <title>FORGE · Career RPG OS</title>
+  <link rel="stylesheet" href="./styles-v5.css">
 </head>
 <body>
-  <div class="noise"></div>
+  <div class="ambient-grid"></div>
+  <div id="toast" class="toast" aria-live="polite"></div>
 
   <section id="authView" class="auth-shell">
-    <div class="auth-card">
-      <div class="eyebrow">FEZ OU NÃO FEZ</div>
-      <h1>Seu estudo começa no ponto.</h1>
-      <p class="muted">O painel mede execução, não intenção. Entre, bata o ponto e deixe uma evidência.</p>
+    <div class="auth-orbit orbit-a"></div><div class="auth-orbit orbit-b"></div>
+    <div class="auth-panel">
+      <div class="auth-mark"><span>F</span></div>
+      <div class="kicker">FORGE · CAREER RPG OS</div>
+      <h1>Construa competência.<br><em>Deixe evidência.</em></h1>
+      <p>Labs reais, break & fix, avaliações e portfólio em uma jornada só.</p>
       <div class="auth-tabs">
-        <button class="tab active" data-auth-tab="signin">Entrar</button>
-        <button class="tab" data-auth-tab="signup">Criar conta</button>
+        <button class="auth-tab active" data-auth-mode="signin">Entrar</button>
+        <button class="auth-tab" data-auth-mode="signup">Criar conta</button>
       </div>
-      <form id="authForm" class="stack">
-        <label><span>Email</span><input id="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
-        <label><span>Senha</span><input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="••••••••"></label>
-        <button id="authSubmit" class="primary big" type="submit">Entrar</button>
+      <form id="authForm" class="auth-form">
+        <label>Email<input id="email" type="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
+        <label>Senha<input id="password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••"></label>
+        <button id="authSubmit" class="btn btn-primary btn-wide" type="submit">Entrar</button>
       </form>
-      <p id="authMessage" class="status"></p>
-      <div class="micro-note">Use somente a chave pública do Supabase no front. O RLS protege seus dados.</div>
+      <p id="authMessage" class="form-message"></p>
+      <span class="auth-foot">Seu progresso fica protegido pelo RLS do Supabase.</span>
     </div>
   </section>
 
-  <div id="appView" class="app hidden">
+  <div id="appView" class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-dot"></div>
-        <div><strong>FEZ OU NÃO FEZ</strong><span>execução &gt; intenção</span></div>
+        <div class="brand-rune">F</div>
+        <div><strong>FORGE</strong><span>fez ou não fez</span></div>
       </div>
-      <nav>
-        <button class="nav-item active" data-view="dashboard">Início</button>
-        <button class="nav-item" data-view="today">Hoje</button>
-        <button class="nav-item track-nav dba-nav" data-track="dba">DBA + DP-300</button>
-        <button class="nav-item track-nav aws-nav" data-track="aws">AWS / Data Lake</button>
-        <button class="nav-item track-nav english-nav" data-track="english">Inglês</button>
-        <button class="nav-item" data-view="insights">Insights</button>
-        <button class="nav-item" data-view="history">Histórico</button>
-        <button class="nav-item" data-view="parking">Depois</button>
+
+      <div class="sidebar-profile">
+        <div class="avatar">M</div>
+        <div><strong>Maria</strong><span id="sidebarRank">Aprendiz · Lv. 1</span></div>
+        <div class="xp-mini"><div id="sidebarXpBar"></div></div>
+      </div>
+
+      <nav class="nav">
+        <span class="nav-label">JORNADA</span>
+        <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span>Início</button>
+        <button class="nav-item" data-view="journey"><span class="nav-icon">◇</span>Mapa da jornada</button>
+
+        <span class="nav-label">MUNDOS</span>
+        <button class="nav-item nav-dba" data-track="dba"><span class="nav-icon">▣</span>DBA / DP-300</button>
+        <button class="nav-item nav-aws" data-track="aws"><span class="nav-icon">◈</span>Bitrix Data Lake</button>
+        <button class="nav-item nav-english" data-track="english"><span class="nav-icon">◎</span>Technical English</button>
+
+        <span class="nav-label">VALIDAÇÃO</span>
+        <button class="nav-item" data-view="assessments"><span class="nav-icon">⚔</span>Avaliações</button>
+        <button class="nav-item" data-view="reports"><span class="nav-icon">⌁</span>Relatórios</button>
+        <button class="nav-item" data-view="portfolio"><span class="nav-icon">▤</span>Portfólio</button>
+
+        <span class="nav-label">REGISTRO</span>
+        <button class="nav-item" data-view="history"><span class="nav-icon">◷</span>Histórico</button>
+        <button class="nav-item" data-view="parking"><span class="nav-icon">＋</span>Depois</button>
       </nav>
+
       <div class="sidebar-bottom">
-        <div class="mini-rule"><strong>Regra</strong><span>organização só vale depois de execução.</span></div>
-        <button id="logoutBtn" class="ghost">Sair</button>
+        <button id="logoutBtn" class="sidebar-action">Sair</button>
       </div>
     </aside>
 
-    <main>
+    <main class="main">
       <header class="topbar">
-        <div><div id="dateLabel" class="eyebrow"></div><h2 id="viewTitle">Painel</h2></div>
-        <div class="top-actions"><div id="sessionChip" class="session-chip idle">sem sessão ativa</div><button id="goTodayBtn" class="primary small">COMEÇAR</button></div>
+        <div>
+          <div id="dateLabel" class="top-date"></div>
+          <div id="breadcrumb" class="breadcrumb">FORGE / INÍCIO</div>
+        </div>
+        <div class="top-actions">
+          <div id="sessionChip" class="live-chip"><i></i><span>sem sessão ativa</span></div>
+          <button id="quickStartBtn" class="btn btn-primary btn-small">⚡ COMEÇAR</button>
+        </div>
       </header>
 
-      <section id="dashboardView" class="view home-view">
-        <div class="home-welcome">
-          <div>
-            <div class="eyebrow">SUA JORNADA</div>
-            <h2>O que importa é saber <em>o que fazer agora</em> e ver o caminho inteiro.</h2>
+      <section id="homeView" class="view">
+        <div class="hero">
+          <div class="hero-copy">
+            <div class="kicker">CAREER QUEST · TEMPORADA 01</div>
+            <h2>Construa a profissional<br>que você quer <em>virar.</em></h2>
+            <p>Prática primeiro. Cada missão deixa uma evidência, cada incidente vira conhecimento e cada conhecimento vira portfólio.</p>
           </div>
-          <div class="home-mini-score">
-            <strong id="homeActiveDays">0</strong>
-            <span>dias de estudo no ano</span>
+          <div class="level-orb">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="50" class="orb-track"></circle>
+              <circle id="levelRing" cx="60" cy="60" r="50" class="orb-fill"></circle>
+            </svg>
+            <div><span>LEVEL</span><strong id="homeLevel">1</strong><small id="homeXp">0 XP</small></div>
           </div>
         </div>
 
-        <article class="home-today card">
-          <div class="home-today-copy">
-            <div class="eyebrow">HOJE · PRÓXIMA MISSÃO</div>
-            <div class="home-today-line">
-              <span id="homeTodayArea" class="track-pill dba">DBA + DP-300</span>
-              <span id="homeTodayModule" class="muted">Fundamentos internos</span>
-            </div>
-            <h3 id="homeTodayTitle">Abrir o SSMS e consultar sys.databases.</h3>
-            <p id="homeTodayEvidence">Evidência: query salva + explicação curta.</p>
+        <article class="quest-card current-quest">
+          <div class="quest-glyph" id="missionGlyph">◈</div>
+          <div class="quest-main">
+            <div class="quest-meta"><span class="status-live">MISSÃO ATUAL</span><span id="missionWorld">BITRIX DATA LAKE</span></div>
+            <h3 id="missionTitle">Bitrix → NiFi: primeira ingestão</h3>
+            <p id="missionText">Faça o NiFi consumir um endpoint real do Bitrix e entenda o payload, o status HTTP e as relationships.</p>
+            <div class="quest-steps" id="missionSteps"></div>
           </div>
-          <div class="home-today-actions">
-            <button id="homeStartBtn" class="primary home-start">COMEÇAR AGORA</button>
-            <span id="homeTodayProgress">0% deste módulo</span>
+          <div class="quest-side">
+            <div class="quest-xp"><span>RECOMPENSA</span><strong id="missionXp">+140 XP</strong></div>
+            <button id="continueMissionBtn" class="btn btn-primary">CONTINUAR MISSÃO</button>
+            <button id="openMissionBtn" class="btn btn-ghost">VER DETALHES</button>
           </div>
         </article>
 
-        <section class="home-section">
-          <div class="home-section-head">
-            <div><div class="eyebrow">MINHAS 3 TRILHAS</div><h3>Estudos separados. Progresso visível.</h3></div>
-            <span class="micro-note">clique em uma trilha para ver todos os conteúdos</span>
-          </div>
-          <div id="homeTracks" class="track-cards"></div>
-        </section>
+        <div class="section-head">
+          <div><span class="kicker">SEUS MUNDOS</span><h3>Três trilhas. Uma carreira.</h3></div>
+          <span class="section-note">progresso baseado em prática + validação</span>
+        </div>
+        <div id="worldCards" class="world-grid"></div>
 
-        <section class="home-section">
-          <div class="home-section-head">
-            <div><div class="eyebrow">MAPA DE HÁBITO</div><h3>Você está aparecendo?</h3></div>
-            <div class="home-habit-kpis">
-              <span><strong id="homeCurrentStreak">0</strong> sequência</span>
-              <span><strong id="homeBestStreak">0</strong> melhor</span>
-              <span><strong id="homeYearTime">0m</strong> no ano</span>
+        <div class="section-head">
+          <div><span class="kicker">MAPA DE HÁBITO</span><h3>Memória visual da execução.</h3></div>
+          <div class="habit-kpis">
+            <span><b id="habitCurrentStreak">0</b> sequência</span>
+            <span><b id="habitBestStreak">0</b> recorde</span>
+            <span><b id="habitHours">0h</b> no ano</span>
+          </div>
+        </div>
+        <article class="panel habit-panel">
+          <div id="habitMap" class="habit-map"></div>
+        </article>
+
+        <div class="home-split">
+          <section>
+            <div class="section-head compact">
+              <div><span class="kicker">QUESTLINE</span><h3>Onde você está.</h3></div>
+              <button class="text-btn" data-view-jump="journey">abrir mapa completo →</button>
             </div>
-          </div>
-          <article class="card habit-card home-habit-card">
-            <div id="activityHeatmap" class="habit-map"></div>
-          </article>
-        </section>
+            <div id="homeQuestline" class="questline-mini"></div>
+          </section>
+          <section>
+            <div class="section-head compact">
+              <div><span class="kicker">ÚLTIMOS REGISTROS</span><h3>O que passou a existir.</h3></div>
+            </div>
+            <div id="homeRecent" class="recent-list"></div>
+          </section>
+        </div>
+      </section>
 
-        <section class="home-section">
-          <div class="home-section-head">
-            <div><div class="eyebrow">JORNADA · 12 SEMANAS</div><h3>O mapa inteiro, sem textão.</h3></div>
-            <span class="micro-note">cada semana = 1 foco de cada trilha</span>
-          </div>
-          <div id="homeJourney" class="home-journey"></div>
-        </section>
-
-        <section class="home-section home-facts">
-          <div class="home-section-head">
-            <div><div class="eyebrow">ESTA SEMANA</div><h3>Fatos, não culpa.</h3></div>
-            <button class="ghost small" data-jump="insights">VER INSIGHTS</button>
-          </div>
-          <div class="home-facts-grid">
-            <div><span>Sessões</span><strong id="dashSessions">0</strong></div>
-            <div><span>Tempo real</span><strong id="dashTime">0m</strong></div>
-            <div><span>Prática</span><strong id="dashPractical">0%</strong></div>
-            <div><span>Comparecimento</span><strong id="attendanceValue">0%</strong></div>
-          </div>
-        </section>
+      <section id="journeyView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">MAPA DA CAMPANHA</span><h2>Da base à autonomia.</h2><p>Não é calendário. Você avança quando constrói competência.</p></div>
+          <div class="page-stat"><strong id="journeyPercent">0%</strong><span>da campanha construída</span></div>
+        </div>
+        <div class="journey-legend">
+          <span><i class="dot done"></i>construído</span><span><i class="dot current"></i>agora</span><span><i class="dot future"></i>depois</span>
+        </div>
+        <div id="journeyMap" class="journey-map"></div>
       </section>
 
       <section id="trackView" class="view hidden">
-        <div class="track-page-hero">
+        <div class="track-hero" id="trackHero">
           <div>
-            <div id="trackSourceChips" class="source-chips"></div>
-            <div id="trackEyebrow" class="eyebrow">TRILHA</div>
-            <h2 id="trackTitle">DBA + DP-300</h2>
+            <div id="trackSources" class="source-chips"></div>
+            <span id="trackKicker" class="kicker">MUNDO</span>
+            <h2 id="trackTitle">DBA / DP-300</h2>
             <p id="trackDescription"></p>
           </div>
-          <div class="track-page-progress">
-            <strong id="trackProgress">0%</strong>
-            <span>da trilha construída</span>
+          <div class="track-progress-orb">
+            <strong id="trackPercent">0%</strong><span>construído</span>
           </div>
         </div>
-        <div id="trackNow" class="track-now card"></div>
-        <div class="skill-tree-head">
-          <div><div class="eyebrow">SKILL TREE</div><h3>Conteúdo → missão → evidência.</h3></div>
-          <span class="micro-note">● feito · ◐ atual · ○ próximo</span>
+        <div id="trackVisual" class="track-visual"></div>
+        <div class="section-head">
+          <div><span class="kicker">MISSÕES</span><h3>Conteúdo → Lab → Break & Fix → Portfólio → Boss.</h3></div>
+          <span class="section-note">clique em qualquer nó para abrir a Mission Room</span>
         </div>
-        <div id="trackModules" class="track-modules"></div>
+        <div id="trackModules" class="module-grid"></div>
       </section>
 
       <section id="todayView" class="view hidden">
-        <div class="today-grid">
-          <article class="card hero-card">
-            <div class="card-head"><div><div class="eyebrow">PRÓXIMA AÇÃO</div><h3>Uma coisa. Agora.</h3></div><span id="areaBadge" class="badge">DBA / DP-300</span></div>
-
-            <div class="area-switch" id="areaSwitch">
-              <button class="area-btn active" data-area="DBA / DP-300">DBA / DP-300</button>
-              <button class="area-btn" data-area="AWS / Data Lake">AWS / Data Lake</button>
-              <button class="area-btn" data-area="Inglês">Inglês</button>
+        <div class="page-hero">
+          <div><span class="kicker">MODO EXECUÇÃO</span><h2>Uma coisa. Agora.</h2><p>Planejamento não pontua. Execução pontua.</p></div>
+          <div class="page-stat"><strong id="todayMinutes">0m</strong><span>hoje</span></div>
+        </div>
+        <div class="today-layout">
+          <article class="panel execution-panel">
+            <div class="execution-context">
+              <span id="todayWorldPill" class="world-pill aws">DATA LAKE</span>
+              <span id="todayModuleLabel">Módulo 01</span>
             </div>
-
-            <label class="task-input-wrap"><span>Ação concreta</span><input id="taskTitleInput" value="Abrir o SSMS e consultar sys.databases"></label>
-
-            <div class="start-plan-row">
-              <label><span>Eu pretendia começar às (opcional)</span><input id="plannedStartTime" type="time"></label>
-              <div><span class="field-label">Queria começar?</span><div class="mood-buttons">
-                <button class="mood" data-mood="sim">😄 sim</button>
-                <button class="mood" data-mood="mais-ou-menos">😐 mais ou menos</button>
-                <button class="mood" data-mood="nao">💀 não</button>
+            <h3 id="todayMissionTitle">Bitrix → NiFi: primeira ingestão</h3>
+            <p id="todayMissionDescription"></p>
+            <label class="field"><span>Ação concreta</span><input id="taskTitleInput" placeholder="O que exatamente vai existir ao final?"></label>
+            <div class="execution-options">
+              <label class="field"><span>Pretendia começar às</span><input id="plannedStartTime" type="time"></label>
+              <div class="field"><span>Vontade agora</span><div class="mood-row">
+                <button class="mood-btn" data-mood="sim">😄 sim</button>
+                <button class="mood-btn active" data-mood="mais-ou-menos">😐 médio</button>
+                <button class="mood-btn" data-mood="nao">💀 zero</button>
               </div></div>
             </div>
-
-            <div class="punch-area">
-              <button id="startSessionBtn" class="primary punch">BATER PONTO</button>
-              <div id="runningPanel" class="running hidden"><div><div class="timer-label">sessão em andamento</div><div id="timer" class="timer">00:00:00</div></div><button id="finishSessionBtn" class="danger">ENCERRAR</button></div>
+            <button id="startSessionBtn" class="btn btn-primary btn-wide btn-huge">BATER PONTO</button>
+            <div id="runningPanel" class="running-panel hidden">
+              <div><span>SESSÃO ATIVA</span><strong id="timer">00:00:00</strong></div>
+              <button id="finishSessionBtn" class="btn btn-danger">ENCERRAR</button>
             </div>
           </article>
 
-          <article class="card">
-            <div class="eyebrow">PLACAR DE HOJE</div>
-            <div class="checklist" id="dailyChecklist">
-              <div><span class="check" data-check="opened">○</span><span>Abri a ferramenta</span></div>
-              <div><span class="check" data-check="practical">○</span><span>Fiz 1 tarefa prática</span></div>
-              <div><span class="check" data-check="evidence">○</span><span>Produzi 1 evidência</span></div>
-              <div><span class="check" data-check="logged">○</span><span>Registrei em 3 linhas</span></div>
+          <aside class="panel objective-panel">
+            <span class="kicker">CHECKPOINTS</span>
+            <h3>Fez ou não fez?</h3>
+            <div id="todayChecklist" class="checkpoint-list">
+              <div data-check="opened"><i>○</i><span>Comecei a sessão</span></div>
+              <div data-check="practical"><i>○</i><span>Executei algo real</span></div>
+              <div data-check="evidence"><i>○</i><span>Deixei evidência</span></div>
+              <div data-check="logged"><i>○</i><span>Fechei em 3 linhas</span></div>
             </div>
-            <div class="rule-box"><strong>Não conta:</strong><span>arrumar Notion, escolher curso, redesenhar cronograma.</span></div>
+            <div class="objective-rule"><span>REGRA</span><p>Arrumar ferramenta, escolher curso e reorganizar planner não conta como estudo.</p></div>
+          </aside>
+        </div>
+
+        <div class="today-bottom">
+          <article class="panel">
+            <span class="kicker">EVIDÊNCIA</span><h3>O que passou a existir?</h3>
+            <form id="evidenceForm" class="evidence-form">
+              <textarea id="evidenceText" rows="4" placeholder="Ex.: InvokeHTTP respondeu 200 e o payload contém os campos..."></textarea>
+              <button class="btn btn-secondary" type="submit">SALVAR EVIDÊNCIA</button>
+            </form>
+            <div id="todayEvidenceList" class="evidence-list"></div>
+          </article>
+          <article class="panel">
+            <span class="kicker">FECHAMENTO</span><h3>Três linhas. Só.</h3>
+            <div class="closure-grid">
+              <label class="field"><span>Aprendi</span><input id="learnedInput"></label>
+              <label class="field"><span>Dúvida</span><input id="doubtInput"></label>
+              <label class="field"><span>Próximo</span><input id="nextInput"></label>
+            </div>
+            <button id="saveClosureBtn" class="btn btn-secondary">SALVAR FECHAMENTO</button>
           </article>
         </div>
-
-        <div class="today-grid bottom-grid">
-          <article class="card"><div class="eyebrow">EVIDÊNCIA</div><h3>O que passou a existir?</h3><form id="evidenceForm" class="stack compact"><textarea id="evidenceText" rows="4" placeholder="Ex.: rodei sys.databases e identifiquei master, model, msdb e tempdb."></textarea><button class="secondary" type="submit">Salvar evidência</button></form><div id="evidenceList" class="evidence-list"></div></article>
-          <article class="card"><div class="eyebrow">FECHAMENTO</div><h3>Três linhas. Só.</h3><div class="three-lines"><label>Aprendi <input id="learnedInput" placeholder="o que ficou claro hoje"></label><label>Dúvida <input id="doubtInput" placeholder="o que ainda preciso entender"></label><label>Próximo <input id="nextInput" placeholder="a primeira ação da próxima sessão"></label></div><button id="saveClosureBtn" class="secondary">Salvar fechamento</button></article>
-        </div>
       </section>
 
-      <section id="insightsView" class="view hidden">
-        <div class="section-intro"><div><div class="eyebrow">PADRÕES, NÃO JULGAMENTO</div><h3>O que ajuda você a começar e continuar</h3></div><p>Os insights só aparecem quando há dados suficientes. Pouca amostra fica marcada como observação, não como verdade.</p></div>
-        <div id="allInsights" class="insight-list large"></div>
-        <div class="dashboard-grid">
-          <article class="card"><div class="eyebrow">HUMOR → PRÁTICA</div><h3>Motivação é necessária?</h3><div id="moodBreakdown" class="bar-list"></div></article>
-          <article class="card"><div class="eyebrow">DURAÇÃO</div><h3>Qual bloco funciona melhor?</h3><div id="durationBreakdown" class="bar-list"></div></article>
-          <article class="card"><div class="eyebrow">LATÊNCIA</div><h3>Quanto demora para começar?</h3><div id="latencyBreakdown" class="bar-list"></div></article>
+      <section id="assessmentsView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">BOSS BATTLES</span><h2>Conhecimento precisa sobreviver ao teste.</h2><p>Teoria, prática, diagnóstico e explicação.</p></div>
+          <button id="importAssessmentBtn" class="btn btn-secondary">IMPORTAR RESULTADO DO CHAT</button>
         </div>
+        <div class="assessment-stats" id="assessmentStats"></div>
+        <div class="section-head"><div><span class="kicker">BOSSES DISPONÍVEIS</span><h3>Pronta para ser avaliada?</h3></div></div>
+        <div id="bossGrid" class="boss-grid"></div>
+        <div class="section-head"><div><span class="kicker">HISTÓRICO</span><h3>Competências validadas.</h3></div></div>
+        <div id="assessmentHistory" class="assessment-history"></div>
       </section>
 
-      <section id="skillsView" class="view hidden">
-        <div class="skills-intro"><div><div class="eyebrow">MAPA GRANDE</div><h3>Você só olha aqui. Não mora aqui.</h3></div><p>0 não conheço · 1 reconheço · 2 entendo · 3 faço com ajuda · 4 faço sozinha · 5 investigo/ensino</p></div>
-        <div id="skillSummaryCards" class="stats-grid"></div>
-        <div id="skillsGrid" class="skills-grid"></div>
+      <section id="reportsView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">INTELIGÊNCIA</span><h2>O que os dados estão dizendo?</h2><p>Execução, gaps, consistência e qualidade da prática.</p></div>
+          <div class="period-switch"><button class="active" data-report-days="7">7D</button><button data-report-days="30">30D</button><button data-report-days="90">90D</button></div>
+        </div>
+        <div id="reportSummary" class="report-summary"></div>
+        <div class="report-layout">
+          <article class="panel"><span class="kicker">TEMPO POR MUNDO</span><div id="reportWorldBars" class="metric-bars"></div></article>
+          <article class="panel"><span class="kicker">QUALIDADE DA PRÁTICA</span><div id="reportQuality" class="quality-grid"></div></article>
+        </div>
+        <div class="section-head"><div><span class="kicker">INSIGHTS</span><h3>Próximas decisões.</h3></div></div>
+        <div id="reportInsights" class="insight-grid"></div>
+      </section>
+
+      <section id="portfolioView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">ARSENAL</span><h2>O que você já construiu.</h2><p>Seu portfólio cresce como consequência do estudo.</p></div>
+          <a class="btn btn-secondary" href="https://github.com/https-Maria/estudos" target="_blank" rel="noopener">ABRIR GITHUB ↗</a>
+        </div>
+        <div id="portfolioProjects" class="portfolio-projects"></div>
+        <div class="section-head"><div><span class="kicker">ARTEFATOS</span><h3>Documentação gerada pela jornada.</h3></div></div>
+        <div id="portfolioArtifacts" class="artifact-list"></div>
       </section>
 
       <section id="historyView" class="view hidden">
-        <div class="section-intro"><div><div class="eyebrow">HISTÓRICO</div><h3>Fatos, não sensação</h3></div><p>Últimas sessões registradas, com tempo, área, humor e execução.</p></div>
-        <article class="card"><div id="historyList" class="history-list"></div></article>
+        <div class="page-hero">
+          <div><span class="kicker">LOG</span><h2>Fatos, não sensação.</h2><p>Sessões reais, tempo real e prática real.</p></div>
+        </div>
+        <div class="panel"><div id="historyList" class="history-list"></div></div>
       </section>
 
       <section id="parkingView" class="view hidden">
-        <article class="card"><div class="card-head"><div><div class="eyebrow">ESTACIONAMENTO</div><h3>Interessante não significa urgente.</h3></div></div><form id="parkingForm" class="inline-form"><input id="parkingInput" placeholder="Ex.: Kubernetes, Oracle, Databricks..." /><button class="secondary" type="submit">Estacionar</button></form><div id="parkingList" class="parking-list"></div></article>
+        <div class="page-hero"><div><span class="kicker">PARKING LOT</span><h2>Interessante não significa urgente.</h2><p>Capture a ideia e volte para a missão.</p></div></div>
+        <div class="panel">
+          <form id="parkingForm" class="parking-form"><input id="parkingInput" placeholder="Ex.: Kubernetes, Oracle, Databricks..."><button class="btn btn-secondary">ESTACIONAR</button></form>
+          <div id="parkingList" class="parking-list"></div>
+        </div>
       </section>
     </main>
   </div>
 
-  <dialog id="finishDialog">
-    <form method="dialog" class="dialog-card" id="finishForm">
-      <div class="eyebrow">ENCERRAR SESSÃO</div><h3>Fez ou não fez?</h3>
-      <label class="toggle-line"><input type="checkbox" id="didPractical"><span>Fiz pelo menos uma tarefa prática.</span></label>
-      <label><span>Observação rápida</span><textarea id="sessionNotes" rows="3" placeholder="Ex.: quase não comecei, mas depois fluiu."></textarea></label>
-      <div class="dialog-actions"><button value="cancel" class="ghost">Cancelar</button><button id="confirmFinishBtn" value="default" class="primary">Salvar sessão</button></div>
+  <dialog id="missionDialog" class="modal">
+    <div class="mission-room">
+      <button class="modal-close" data-close-dialog="missionDialog">×</button>
+      <div id="missionRoomHead" class="mission-room-head"></div>
+      <div id="missionRoomBody"></div>
+    </div>
+  </dialog>
+
+  <dialog id="finishDialog" class="modal small-modal">
+    <form id="finishForm" class="modal-card">
+      <button class="modal-close" type="button" data-close-dialog="finishDialog">×</button>
+      <span class="kicker">FECHAR SESSÃO</span><h3>Fez ou não fez?</h3>
+      <label class="toggle-row"><input id="didPractical" type="checkbox"><span>Executei pelo menos uma tarefa prática.</span></label>
+      <label class="field"><span>Observação rápida</span><textarea id="sessionNotes" rows="3" placeholder="Ex.: travei no 401, entendi a causa e corrigi."></textarea></label>
+      <div class="modal-actions"><button class="btn btn-ghost" type="button" data-close-dialog="finishDialog">CANCELAR</button><button id="confirmFinishBtn" class="btn btn-primary" type="submit">SALVAR SESSÃO</button></div>
     </form>
+  </dialog>
+
+  <dialog id="assessmentDialog" class="modal small-modal">
+    <form id="assessmentImportForm" class="modal-card">
+      <button class="modal-close" type="button" data-close-dialog="assessmentDialog">×</button>
+      <span class="kicker">SYNC COM CHATGPT</span><h3>Importar avaliação</h3>
+      <p class="muted">Cole o JSON de resultado que eu gerar depois da Boss Battle.</p>
+      <textarea id="assessmentJson" rows="12" placeholder='{"track_id":"aws","module_id":"aws-01","score":88,"validated_level":4,...}'></textarea>
+      <div class="modal-actions"><button class="btn btn-ghost" type="button" data-close-dialog="assessmentDialog">CANCELAR</button><button class="btn btn-primary" type="submit">IMPORTAR</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dayDialog" class="modal small-modal">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close-dialog="dayDialog">×</button>
+      <div id="dayDetail"></div>
+    </div>
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./analytics.js"></script>
   <script src="./curriculum.js"></script>
-  <script src="./roadmap.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app-v5.js"></script>
 </body>
 </html>
