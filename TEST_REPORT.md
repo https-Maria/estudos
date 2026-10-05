@@ -66,3 +66,10 @@ Validações executadas após a reconstrução:
 - `supabase_v5_migration.sql` com `module_progress`, `assessments`, índices, RLS e políticas por usuário;
 - paleta temática separada para DBA, AWS e English;
 - teste automatizado `tests/v5.test.js`.
+
+
+## GitHub Actions — FORGE V5
+- Workflow: `.github/workflows/tests.yml`
+- Node 22
+- `npm test` executa analytics, roadmap, curriculum e V5 integration.
+- Execução após correção do currículo: **success**.
