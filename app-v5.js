@@ -317,4 +317,10 @@
 
   async function enter(u){user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');await store.seed(u.id);await refresh();setView('home');if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700)}
   async function boot(){
- 
+    $('#dateLabel').textContent=fmtLong(new Date()).toUpperCase();initBindings();
+    if(DEMO){await enter({id:'demo',email:'demo@local'});return}
+    const s=await store.session();if(s?.user)await enter(s.user);else{$('#authView').classList.remove('hidden');$('#appView').classList.add('hidden')}
+    store.onAuth(async s=>{if(s?.user&&!user)await enter(s.user);if(!s?.user){user=null;$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden')}});
+  }
+  boot().catch(err=>{console.error(err);toast(`Erro ao iniciar: ${err.message}`)});
+})();
