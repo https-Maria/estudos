@@ -129,82 +129,6 @@
   function renderChecklist(){Object.entries(checklist).forEach(([k,v])=>{const el=$(`[data-check="${k}"]`);if(!el)return;el.textContent=v?'●':'○';el.classList.toggle('done',v)})}
   function renderEvidence(){const items=evidences.filter(e=>A.key(e.created_at)===todayKey()).reverse();$('#evidenceList').innerHTML=items.length?items.map(x=>`<div class="evidence-item">${escapeHtml(x.description)}</div>`).join(''):'<div class="micro-note">Nenhuma evidência hoje ainda.</div>'}
 
-  function renderJourney(){
-    if(!R) return;
-    const state=R.state(competencies);
-    const current=state.currentWeek;
-    const currentProgress=state.progress[state.currentIndex]||0;
-
-    $('#journeyOverall').textContent=`${state.overall}%`;
-    $('#journeySnapshotTitle').textContent=state.complete?'Jornada-base concluída':`Semana ${current.week} · ${current.title}`;
-    $('#journeySnapshotText').textContent=state.complete?'Agora o mapa vira revisão, aprofundamento e prova prática.':current.why;
-    $('#journeySnapshotBar').style.width=`${state.overall}%`;
-    $('#journeyNowTitle').textContent=state.complete?'12 semanas construídas':`Semana ${current.week} · ${current.title}`;
-    $('#journeyNowWhy').textContent=state.complete?'Você já atravessou o mapa-base. A partir daqui, o foco é consolidar, revisar lacunas e praticar cenários reais.':current.why;
-    $('#journeyNowPercent').textContent=`${state.complete?100:currentProgress}%`;
-
-    let lastPhase='';
-    const html=state.weeks.map((week,index)=>{
-      const progress=state.progress[index]||0;
-      const status=state.complete||index<state.currentIndex?'done':index===state.currentIndex?'current':'future';
-      const phaseHeader=week.phase!==lastPhase
-        ? `<div class="journey-phase"><span>${escapeHtml(week.phase)}</span><div></div></div>`
-        : '';
-      lastPhase=week.phase;
-      const tracks=Object.entries(week.tracks).map(([area,track])=>{
-        const lane=area.startsWith('DBA')?'dba':area.startsWith('AWS')?'aws':'english';
-        return `<div class="journey-track ${lane}">
-          <div class="journey-track-head"><span class="lane-dot ${lane}"></span><strong>${escapeHtml(area)}</strong></div>
-          <p>${escapeHtml(track.task)}</p>
-        </div>`;
-      }).join('');
-      const actions=index===state.currentIndex && !state.complete
-        ? `<div class="journey-actions">${Object.keys(week.tracks).map(area=>`<button class="ghost small" data-roadmap-week="${index}" data-roadmap-area="${escapeHtml(area)}">LEVAR ${area.startsWith('DBA')?'DBA':area.startsWith('AWS')?'AWS':'INGLÊS'} PARA HOJE</button>`).join('')}</div>`
-        : '';
-      return `${phaseHeader}<article class="journey-week ${status}">
-        <div class="journey-node"><span>${week.week}</span></div>
-        <div class="journey-week-card">
-          <div class="journey-week-head">
-            <div><span class="journey-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'DEPOIS'}</span><h3>Semana ${week.week} · ${escapeHtml(week.title)}</h3></div>
-            <strong class="journey-week-percent">${progress}%</strong>
-          </div>
-          <p class="journey-why">${escapeHtml(week.why)}</p>
-          <div class="journey-week-progress"><div style="width:${progress}%"></div></div>
-          <div class="journey-tracks">${tracks}</div>
-          <div class="journey-evidence"><span>EVIDÊNCIA DA SEMANA</span><p>${escapeHtml(week.evidence)}</p></div>
-          ${actions}
-        </div>
-      </article>`;
-    }).join('');
-
-    $('#journeyTimeline').innerHTML=html;
-    $('#journeyTimeline [data-roadmap-week]').forEach(btn=>btn.onclick=()=>{
-      const week=R.weeks[Number(btn.dataset.roadmapWeek)];
-      const area=btn.dataset.roadmapArea;
-      const track=week.tracks[area];
-      selectedArea=area;
-      $('.area-btn').forEach(x=>x.classList.toggle('active',x.dataset.area===area));
-      $('#areaBadge').textContent=area;
-      $('#taskTitleInput').value=track.task;
-      switchView('today');
-    });
-  }
-
-  function recommendedTrackId(){
-    const now=new Date(), day=now.getDay(), hour=now.getHours();
-    if(day>=1 && day<=5 && hour>=7 && hour<18) return 'aws';
-    if(day===3 || day===5) return 'english';
-    return 'dba';
-  }
-
-  function setTodayMission(track,module){
-    selectedArea=track.area;
-    $$('.area-btn').forEach(x=>x.classList.toggle('active',x.dataset.area===track.area));
-    $('#areaBadge').textContent=track.area;
-    $('#taskTitleInput').value=module.mission;
-    switchView('today');
-  }
-
   function renderDashboard(){
     if(!C) return;
     const s=A.summary(sessions,evidences,competencies,{weeklyTarget:4});
@@ -305,7 +229,7 @@
       <p>${escapeHtml(current.mission)}</p>
     </div>
     <div class="track-now-side"><strong>${currentProgress}%</strong><button class="primary small" id="trackStartNow">COMEÇAR MISSÃO</button></div>`;
-    $('#trackStartNow').onclick=()=>setTodayMission(track,current);
+    $('#trackNow').querySelector('#trackStartNow').onclick=()=>setTodayMission(track,current);
 
     $('#trackModules').innerHTML=track.modules.map((module,i)=>{
       const p=C.moduleProgress(module,track,competencies);
