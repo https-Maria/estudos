@@ -1,6 +1,7 @@
 (() => {
   const A = window.StudyAnalytics;
   const R = window.StudyRoadmap;
+  const C = window.StudyCurriculum;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const qs = new URLSearchParams(location.search);
@@ -112,7 +113,7 @@
     renderAll();
   }
 
-  function renderAll(){renderSessionState();renderChecklist();renderEvidence();renderDashboard();renderJourney();renderInsights();renderSkills();renderHistory();renderParking()}
+  function renderAll(){renderSessionState();renderChecklist();renderEvidence();renderDashboard();renderInsights();renderHistory();renderParking()}
 
   function switchView(view){
     $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===view));$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${view}View`)?.classList.remove('hidden');
@@ -189,27 +190,150 @@
     });
   }
 
-  function renderDashboard(){
-    const s=A.summary(sessions,evidences,competencies,{weeklyTarget:4});
-    $('#attendanceValue').textContent=`${s.attendance}%`;$('#attendanceRing').style.background=`conic-gradient(var(--accent) ${s.attendance*3.6}deg,#0d131a 0)`;
-    $('#dashSessions').textContent=s.sessions7;$('#dashSessionsDelta').textContent=`meta ${s.target} · ${s.activeDays7} dia(s) ativo(s)`;
-    $('#dashTime').textContent=formatMinutes(s.minutes7);$('#dashTimeDelta').textContent=`${s.momentumMinutes>=0?'+':''}${s.momentumMinutes}% vs. 7 dias anteriores`;
-    $('#dashPractical').textContent=`${s.practicalRate}%`;$('#dashEvidence').textContent=`${s.evidenceRate}%`;$('#dashClosure').textContent=`${s.closureRate}%`;$('#dashLatency').textContent=s.avgLatency===null?'—':`${s.avgLatency}m`;
-    if(s.sessions7===0){$('#heroMessage').textContent='O próximo dado ainda não existe.';$('#heroSub').textContent='Vá em Hoje, bata o ponto e crie a primeira evidência.'}
-    else if(s.attendance>=100){$('#heroMessage').textContent='Você compareceu ao que combinou.';$('#heroSub').textContent=`${s.sessions7} sessões nesta semana. Agora olhamos a qualidade da execução.`}
-    else{$('#heroMessage').textContent=`Você já apareceu ${s.sessions7} vez(es) esta semana.`;$('#heroSub').textContent=`Faltam ${Math.max(0,s.target-s.sessions7)} sessão(ões) para a referência semanal — sem compensar em maratona.`}
+  function recommendedTrackId(){
+    const now=new Date(), day=now.getDay(), hour=now.getHours();
+    if(day>=1 && day<=5 && hour>=7 && hour<18) return 'aws';
+    if(day===3 || day===5) return 'english';
+    return 'dba';
+  }
 
-    const trend=A.weeklyTrend(sessions,8);const max=Math.max(30,...trend.map(x=>x.minutes));$('#weeklyTrend').innerHTML=trend.map(x=>`<div class="trend-col"><div class="trend-bar-wrap" title="${x.minutes} min"><div class="trend-bar" style="height:${Math.max(2,x.minutes/max*100)}%"></div></div><strong>${x.label}</strong><span>${x.minutes}m</span></div>`).join('');
-    $('#executionFunnel').innerHTML=A.funnel(sessions,evidences,30).map(x=>`<div class="funnel-row"><span>${x.label}</span><div class="funnel-track"><div class="funnel-fill" style="width:${x.rate}%"></div></div><strong>${x.rate}%</strong></div>`).join('');
-    $('#noMoodProof').textContent=s.noMoodPractical;$('#noMoodTitle').textContent=s.noMoodCount?`${s.noMoodSuccessRate}% virou prática`:'Ainda sem dados';$('#noMoodText').textContent=s.noMoodCount?`${s.noMoodCount} sessão(ões) começaram no 💀 nos últimos 30 dias; ${s.noMoodPractical} ainda assim executaram algo.`:'Quando houver sessões no 💀, eu vou medir quantas ainda viraram prática.';
-    renderBars('#areaBreakdown',A.areaBreakdown(sessions,30).map(x=>({label:x.area,value:x.share,text:`${x.minutes}m`})));
+  function setTodayMission(track,module){
+    selectedArea=track.area;
+    $$('.area-btn').forEach(x=>x.classList.toggle('active',x.dataset.area===track.area));
+    $('#areaBadge').textContent=track.area;
+    $('#taskTitleInput').value=module.mission;
+    switchView('today');
+  }
+
+  function renderDashboard(){
+    if(!C) return;
+    const s=A.summary(sessions,evidences,competencies,{weeklyTarget:4});
+    const habit=A.habitMap(sessions,evidences,365);
+    const recommended=C.getTrack(recommendedTrackId());
+    const currentIndex=C.currentModuleIndex(recommended,competencies);
+    const currentModule=recommended.modules[currentIndex];
+    const currentProgress=C.moduleProgress(currentModule,recommended,competencies);
+
+    $('#dashSessions').textContent=s.sessions7;
+    $('#dashTime').textContent=formatMinutes(s.minutes7);
+    $('#dashPractical').textContent=`${s.practicalRate}%`;
+    $('#attendanceValue').textContent=`${s.attendance}%`;
+
+    $('#homeActiveDays').textContent=habit.activeDays;
+    $('#homeCurrentStreak').textContent=habit.currentStreak;
+    $('#homeBestStreak').textContent=habit.bestStreak;
+    $('#homeYearTime').textContent=formatMinutes(habit.totalMinutes);
+
+    $('#homeTodayArea').textContent=recommended.label;
+    $('#homeTodayArea').className=`track-pill ${recommended.id}`;
+    $('#homeTodayModule').textContent=`Módulo ${currentIndex+1} · ${currentModule.title}`;
+    $('#homeTodayTitle').textContent=currentModule.mission;
+    $('#homeTodayEvidence').textContent=`Evidência: ${currentModule.evidence}`;
+    $('#homeTodayProgress').textContent=`${currentProgress}% deste módulo`;
+    $('#homeStartBtn').onclick=()=>setTodayMission(recommended,currentModule);
+
+    $('#homeTracks').innerHTML=C.tracks.map(track=>{
+      const progress=C.trackProgress(track,competencies);
+      const idx=C.currentModuleIndex(track,competencies);
+      const mod=track.modules[idx];
+      return `<button class="track-card ${track.id}" data-open-track="${track.id}">
+        <div class="track-card-top">
+          <span class="track-icon">${track.id==='dba'?'DB':track.id==='aws'?'AWS':'EN'}</span>
+          <span class="track-card-progress">${progress}%</span>
+        </div>
+        <h3>${escapeHtml(track.label)}</h3>
+        <p>${escapeHtml(track.description)}</p>
+        <div class="track-progress"><div style="width:${progress}%"></div></div>
+        <div class="track-next"><span>AGORA</span><strong>${escapeHtml(mod.title)}</strong></div>
+        <div class="track-card-footer"><span>${track.modules.length} módulos</span><strong>ABRIR TRILHA →</strong></div>
+      </button>`;
+    }).join('');
+    $$('[data-open-track]').forEach(btn=>btn.onclick=()=>openTrack(btn.dataset.openTrack));
+
     renderHabitMap();
-    const insights=A.generateInsights(sessions,evidences,competencies,{weeklyTarget:4});renderInsightList('#dashboardInsights',insights.slice(0,3));
-    const cs=A.competencySummary(competencies);$('#competencyMini').innerHTML=cs.map(x=>`<div class="comp-mini-row"><div class="comp-mini-head"><span>${escapeHtml(x.area)}</span><span>${x.progress}% · média ${x.average}</span></div><div class="bar-track"><div class="bar-fill" style="width:${x.progress}%"></div></div></div>`).join('');
+    renderHomeJourney();
+  }
+
+  function renderHomeJourney(){
+    const weeks=Array.from({length:12},(_,i)=>{
+      const mods=C.tracks.map(t=>({track:t,module:t.modules[i],progress:C.moduleProgress(t.modules[i],t,competencies)}));
+      const avg=Math.round(mods.reduce((a,x)=>a+x.progress,0)/mods.length);
+      return {week:i+1,mods,avg};
+    });
+    let current=weeks.findIndex(w=>w.avg<80);
+    if(current<0) current=11;
+    $('#homeJourney').innerHTML=weeks.map((w,i)=>{
+      const state=i<current?'done':i===current?'current':'future';
+      return `<article class="home-week ${state}">
+        <div class="home-week-number">${state==='done'?'✓':w.week}</div>
+        <div class="home-week-content">
+          <div class="home-week-head"><strong>Semana ${w.week}</strong><span>${w.avg}%</span></div>
+          <div class="home-week-tracks">
+            ${w.mods.map(x=>`<button class="home-week-track ${x.track.id}" data-open-track="${x.track.id}"><span>${x.track.short}</span><strong>${escapeHtml(x.module.title)}</strong></button>`).join('')}
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+    $$('#homeJourney [data-open-track]').forEach(btn=>btn.onclick=()=>openTrack(btn.dataset.openTrack));
+  }
+
+  function openTrack(trackId){
+    const track=C.getTrack(trackId);
+    if(!track) return;
+    renderTrack(trackId);
+    $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.track===trackId));
+    $$('.view').forEach(v=>v.classList.add('hidden'));
+    $('#trackView').classList.remove('hidden');
+    $('#viewTitle').textContent=track.label;
+  }
+
+  function renderTrack(trackId){
+    const track=C.getTrack(trackId);
+    const idx=C.currentModuleIndex(track,competencies);
+    const progress=C.trackProgress(track,competencies);
+    $('#trackEyebrow').textContent=`${track.short.toUpperCase()} · TRILHA COMPLETA`;
+    $('#trackTitle').textContent=track.label;
+    $('#trackDescription').textContent=track.description;
+    $('#trackProgress').textContent=`${progress}%`;
+    $('#trackSourceChips').innerHTML=track.sources.map(s=>`<span>${escapeHtml(s)}</span>`).join('');
+
+    const current=track.modules[idx];
+    const currentProgress=C.moduleProgress(current,track,competencies);
+    $('#trackNow').innerHTML=`<div>
+      <div class="eyebrow">VOCÊ ESTÁ AQUI</div>
+      <h3>Módulo ${idx+1} · ${escapeHtml(current.title)}</h3>
+      <p>${escapeHtml(current.mission)}</p>
+    </div>
+    <div class="track-now-side"><strong>${currentProgress}%</strong><button class="primary small" id="trackStartNow">COMEÇAR MISSÃO</button></div>`;
+    $('#trackStartNow').onclick=()=>setTodayMission(track,current);
+
+    $('#trackModules').innerHTML=track.modules.map((module,i)=>{
+      const p=C.moduleProgress(module,track,competencies);
+      const state=i<idx?'done':i===idx?'current':'future';
+      return `<article class="skill-node ${state} ${track.id}">
+        <div class="skill-node-rail"><span>${state==='done'?'✓':i+1}</span></div>
+        <div class="skill-node-card">
+          <div class="skill-node-head">
+            <div><span class="skill-state">${state==='done'?'CONSTRUÍDO':state==='current'?'AGORA':'PRÓXIMO'}</span><h3>${escapeHtml(module.title)}</h3></div>
+            <strong>${p}%</strong>
+          </div>
+          <div class="skill-node-progress"><div style="width:${p}%"></div></div>
+          <div class="topic-label">CONTEÚDOS</div>
+          <div class="topic-chips">${module.topics.map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
+          <div class="mission-box"><div><span>MISSÃO</span><p>${escapeHtml(module.mission)}</p></div><div><span>EVIDÊNCIA</span><p>${escapeHtml(module.evidence)}</p></div></div>
+          <button class="ghost small module-start" data-start-module="${i}">COMEÇAR ESTE MÓDULO</button>
+        </div>
+      </article>`;
+    }).join('');
+    $$('#trackModules [data-start-module]').forEach(btn=>btn.onclick=()=>setTodayMission(track,track.modules[Number(btn.dataset.startModule)]));
   }
 
   function renderHabitMap(){
     const h=A.habitMap(sessions,evidences,365);
+    if($('#homeActiveDays')) $('#homeActiveDays').textContent=h.activeDays;
+    if($('#homeCurrentStreak')) $('#homeCurrentStreak').textContent=h.currentStreak;
+    if($('#homeBestStreak')) $('#homeBestStreak').textContent=h.bestStreak;
+    if($('#homeYearTime')) $('#homeYearTime').textContent=formatMinutes(h.totalMinutes);
     const monthAt=new Map(h.months.map(m=>[m.week,m.label]));
     const monthLabels=h.weeks.map((_,i)=>`<span>${monthAt.get(i)||''}</span>`).join('');
     const columns=h.weeks.map(week=>`<div class="habit-week">${week.map(d=>{
@@ -276,7 +400,7 @@
 
   $$('.tab').forEach(btn=>btn.addEventListener('click',()=>{$$('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');authMode=btn.dataset.authTab;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#authMessage').textContent=''}));
   $('#authForm').addEventListener('submit',async e=>{e.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;$('#authMessage').textContent='processando...';try{const result=authMode==='signin'?await store.signIn(email,password):await store.signUp(email,password);if(result?.user)await enterApp(result.user);else $('#authMessage').textContent='Conta criada. Se a confirmação de email estiver ativa, confirme antes de entrar.'}catch(err){$('#authMessage').textContent=err.message}});
-  $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.view));$('#goTodayBtn').onclick=()=>switchView('today');$$('[data-jump]').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.jump));
+  $('#logoutBtn').onclick=()=>store.signOut();$('.nav-item').forEach(btn=>btn.onclick=()=>btn.dataset.track?openTrack(btn.dataset.track):switchView(btn.dataset.view));$('#goTodayBtn').onclick=()=>switchView('today');$('[data-jump]').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.jump));
   $$('.area-btn').forEach(btn=>btn.onclick=()=>{selectedArea=btn.dataset.area;$$('.area-btn').forEach(x=>x.classList.toggle('active',x===btn));$('#areaBadge').textContent=selectedArea});
   $$('.mood').forEach(btn=>btn.onclick=()=>{selectedMood=btn.dataset.mood;$$('.mood').forEach(x=>x.classList.toggle('selected',x===btn))});
 
