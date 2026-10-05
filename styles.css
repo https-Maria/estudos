@@ -87,3 +87,12 @@ dialog{border:0;border-radius:18px;background:var(--panel);color:var(--text);pad
 
 @media(max-width:900px){.track-cards{grid-template-columns:1fr}.home-today{grid-template-columns:1fr}.home-today-actions{justify-items:start}.home-week-tracks{grid-template-columns:1fr}.home-facts-grid{grid-template-columns:1fr 1fr}.track-page-hero{grid-template-columns:1fr}.track-page-progress{text-align:left}.mission-box{grid-template-columns:1fr}}
 @media(max-width:560px){.home-welcome{align-items:flex-start;flex-direction:column}.home-mini-score{text-align:left}.home-section-head{align-items:flex-start;flex-direction:column}.home-habit-kpis{gap:9px}.home-facts-grid{grid-template-columns:1fr 1fr}.skill-node{grid-template-columns:34px minmax(0,1fr);gap:8px}.skill-node-rail>span{width:32px;height:32px}.track-modules:before{left:16px}.skill-node-card{padding:13px}}
+
+
+.module-practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.breakfix-box,.portfolio-box{padding:10px 12px;border-radius:10px;background:#0a1016;border:1px solid var(--line)}
+.breakfix-box{border-left:2px solid var(--danger)}
+.portfolio-box{border-left:2px solid var(--warn)}
+.breakfix-box span,.portfolio-box span{font:800 .56rem ui-monospace,monospace;letter-spacing:.1em;color:var(--muted)}
+.breakfix-box p,.portfolio-box p{font-size:.7rem;color:#cbd4df;line-height:1.42;margin:5px 0 0}
+@media(max-width:700px){.module-practice-grid{grid-template-columns:1fr}}
