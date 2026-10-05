@@ -165,3 +165,20 @@ Ao passar o mouse, o painel mostra sessões, minutos, práticas e evidências da
 - tempo total acumulado no ano.
 
 O app busca 370 dias de sessões/evidências do Supabase para que o mapa anual seja completo. Nenhuma migração de banco é necessária para a V3.
+
+## Jornada de 12 semanas
+
+A aba **Jornada** transforma o cronograma em um mapa visual de formação. Ela mostra três pistas paralelas:
+
+- **DBA / DP-300** — fundamentos, índices, planos, performance, transações, concorrência, DMVs, backup/restore, segurança, automação, HA/DR e Azure SQL;
+- **AWS / Data Lake** — S3, Parquet, Glue Catalog, Athena, Glue ETL, PySpark, Bronze/Silver/Gold, Step Functions e Lake Formation;
+- **Inglês técnico** — there is/are, tempos verbais, modais, perguntas, preposições, writing e speaking.
+
+Cada semana tem:
+- um objetivo;
+- uma missão concreta por trilha;
+- uma evidência esperada;
+- progresso calculado a partir dos níveis das competências;
+- um botão para levar a missão atual direto para a tela **Hoje**.
+
+A semana atual é a primeira cujo progresso ainda está abaixo de 80%, então o mapa avança conforme competência real, não por calendário.
