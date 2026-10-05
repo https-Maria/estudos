@@ -42,3 +42,13 @@ O modo `demo.html?demo=1` foi incluído justamente para abrir o painel com dados
 - smoke test do mapa anual junto da nova versão.
 
 Validação executada no runtime do conector após a publicação dos arquivos.
+
+
+## V4 — Home objetiva + skill trees
+- `curriculum.js`: 3 trilhas × 12 módulos;
+- todos os módulos possuem conteúdos, missão e evidência;
+- progressão por competência;
+- Home com próxima missão, 3 trilhas, mapa anual e jornada compacta;
+- páginas separadas para DBA/DP-300, AWS/Data Lake e Inglês;
+- teste estático HTML ↔ JavaScript sem IDs ausentes;
+- sintaxe de `app.js`, `analytics.js`, `curriculum.js` e `roadmap.js` validada.
