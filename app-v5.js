@@ -293,4 +293,28 @@
     $$('.mood-btn').forEach(b=>b.onclick=()=>{selectedMood=b.dataset.mood;$$('.mood-btn').forEach(x=>x.classList.toggle('active',x===b))});
     $('#startSessionBtn').onclick=startSession;$('#finishSessionBtn').onclick=()=>$('#finishDialog').showModal();$('#finishForm').onsubmit=finishSession;$('#evidenceForm').onsubmit=saveEvidence;$('#saveClosureBtn').onclick=saveClosure;
     $('#parkingForm').onsubmit=async e=>{e.preventDefault();const topic=$('#parkingInput').value.trim();if(!topic)return;await store.addParking(topic);$('#parkingInput').value='';await refresh()};
-    $$('[data-close-dialog]').forEach(b=>b.onclick=()=>d
+    $$('[data-close-dialog]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.closeDialog).close());$('#importAssessmentBtn').onclick=()=>$('#assessmentDialog').showModal();
+    $('#assessmentImportForm').onsubmit=async e=>{e.preventDefault();try{const obj=JSON.parse($('#assessmentJson').value);await importAssessment(obj);$('#assessmentJson').value='';$('#assessmentDialog').close()}catch(err){toast(err.message)}};
+    $$('[data-report-days]').forEach(b=>b.onclick=()=>{reportDays=Number(b.dataset.reportDays);$$('[data-report-days]').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
+  }
+
+  async function startSession(){
+    const t=track(selectedTrackId),m=t.modules.find(x=>x.id===selectedModuleId)||t.modules[currentIndex(t)],started=new Date();let planned=null,latency=null;const time=$('#plannedStartTime').value;if(time){const [h,min]=time.split(':').map(Number);planned=new Date(started);planned.setHours(h,min,0,0);latency=Math.max(0,Math.round((started-planned)/60000))}
+    try{currentSession=await store.insertSession({user_id:uid(),area:t.area,track_id:t.id,module_id:m.id,task_title:$('#taskTitleInput').value.trim()||m.mission,started_at:started.toISOString(),planned_start_at:planned?.toISOString()||null,start_latency_minutes:latency,mood:selectedMood});await refresh();toast('Ponto batido. Agora executa.')}catch(err){toast(err.message)}
+  }
+  async function finishSession(e){
+    e.preventDefault();if(!currentSession)return;const finished=new Date(),practical=$('#didPractical').checked;
+    try{await store.updateSession(currentSession.id,{finished_at:finished.toISOString(),duration_minutes:Math.max(1,Math.round((finished-new Date(currentSession.started_at))/60000)),practical_done:practical,notes:$('#sessionNotes').value.trim()||null});if(practical&&features.v5){const t=currentSession.track_id||selectedTrackId,m=currentSession.module_id||selectedModuleId,old=recFor(t,m)||{track_id:t,module_id:m,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};await store.upsertProgress({...old,track_id:t,module_id:m,lab_done:true})}$('#finishDialog').close();$('#didPractical').checked=false;$('#sessionNotes').value='';currentSession=null;await refresh();toast('Sessão encerrada e registrada.')}catch(err){toast(err.message)}
+  }
+  async function saveEvidence(e){
+    e.preventDefault();const description=$('#evidenceText').value.trim();if(!description)return;const todays=sessions.filter(s=>dateKey(s.started_at)===dateKey(new Date())),target=currentSession||todays[todays.length-1];if(!target){toast('Bata o ponto antes de registrar evidência.');return}
+    try{await store.insertEvidence({user_id:uid(),session_id:target.id,area:target.area,description});if(features.v5){const t=target.track_id||selectedTrackId,m=target.module_id||selectedModuleId,old=recFor(t,m)||{track_id:t,module_id:m,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};await store.upsertProgress({...old,track_id:t,module_id:m,evidence_done:true})}$('#evidenceText').value='';await refresh();toast('Evidência salva.')}catch(err){toast(err.message)}
+  }
+  async function saveClosure(){
+    const learned=$('#learnedInput').value.trim(),doubt=$('#doubtInput').value.trim(),next=$('#nextInput').value.trim();if(!learned&&!doubt&&!next)return;const todays=sessions.filter(s=>dateKey(s.started_at)===dateKey(new Date())),target=currentSession||todays[todays.length-1];if(!target){toast('Não há sessão para fechar.');return}
+    try{await store.updateSession(target.id,{learned,doubt,next_action:next});$('#learnedInput').value=$('#doubtInput').value=$('#nextInput').value='';await refresh();toast('Fechamento salvo.')}catch(err){toast(err.message)}
+  }
+
+  async function enter(u){user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');await store.seed(u.id);await refresh();setView('home');if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700)}
+  async function boot(){
+ 
