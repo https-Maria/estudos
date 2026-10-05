@@ -182,3 +182,22 @@ Cada semana tem:
 - um botão para levar a missão atual direto para a tela **Hoje**.
 
 A semana atual é a primeira cujo progresso ainda está abaixo de 80%, então o mapa avança conforme competência real, não por calendário.
+
+
+## Como o conteúdo é definido
+
+O currículo vive em `curriculum.js` e é separado da interface.
+
+Cada módulo contém:
+- conteúdos;
+- competência associada;
+- missão prática;
+- evidência esperada;
+- fontes/origem da trilha.
+
+As três fontes principais são:
+1. blueprint oficial da DP-300 + competências reais de DBA;
+2. stack real de AWS/Data Lake usado no trabalho;
+3. gaps reais de inglês técnico.
+
+A Home mostra apenas o próximo passo, as três trilhas, o mapa de hábito e a jornada de 12 semanas. Ao abrir uma trilha, a skill tree mostra todos os conteúdos daquele módulo.
