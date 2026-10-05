@@ -253,4 +253,27 @@
     if(!obj.track_id||!obj.module_id||!Number.isFinite(Number(obj.score)))throw new Error('JSON precisa de track_id, module_id e score.');
     const row=await store.addAssessment({track_id:obj.track_id,module_id:obj.module_id,score:Number(obj.score),validated_level:Number(obj.validated_level||0),summary:obj.summary||null,strengths:obj.strengths||[],gaps:obj.gaps||[]});assessments.push(row);
     const old=recFor(obj.track_id,obj.module_id)||{track_id:obj.track_id,module_id:obj.module_id,lab_done:true,evidence_done:true,breakfix_done:true,portfolio_done:false};
-    const p=await store.upsertProgress({...old,track_id:obj.track_id,module_id:obj.module_id,assessment_score:Number(obj.score),validated_level:Number(obj.validated_lev
+    const p=await store.upsertProgress({...old,track_id:obj.track_id,module_id:obj.module_id,assessment_score:Number(obj.score),validated_level:Number(obj.validated_level||0)});const i=moduleProgress.findIndex(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id);if(i>=0)moduleProgress[i]=p;else moduleProgress.push(p);renderAll();toast('Boss Battle importada e progresso atualizado.');
+  }
+
+  function sessionsIn(days){const cutoff=Date.now()-days*DAY;return sessions.filter(s=>s.finished_at&&new Date(s.started_at).getTime()>=cutoff)}
+  function renderReports(){
+    const ss=sessionsIn(reportDays),mins=ss.reduce((n,s)=>n+A.minutes(s),0),practical=ss.filter(s=>s.practical_done).length,evIds=new Set(evidence.filter(e=>new Date(e.created_at).getTime()>=Date.now()-reportDays*DAY).map(e=>e.session_id)),docs=moduleProgress.filter(r=>r.portfolio_done).length,bf=moduleProgress.filter(r=>r.breakfix_done).length;
+    $('#reportSummary').innerHTML=[['Sessões',ss.length],['Tempo',fmtMinutes(mins)],['Labs práticos',practical],['Artefatos Git',docs]].map(([a,b])=>`<div class="stat-tile"><span>${a}</span><strong>${b}</strong></div>`).join('');
+    const areaMins=C.tracks.map(t=>({t,min:ss.filter(s=>s.area===t.area).reduce((n,s)=>n+A.minutes(s),0)})),max=Math.max(1,...areaMins.map(x=>x.min));
+    $('#reportWorldBars').innerHTML=areaMins.map(x=>`<div class="metric-row"><span>${escapeHtml(x.t.short)}</span><div class="metric-bar"><div style="width:${Math.round(x.min/max*100)}%;background:${x.t.id==='dba'?'var(--copper)':x.t.id==='aws'?'var(--amber)':'var(--emerald)'}"></div></div><strong>${fmtMinutes(x.min)}</strong></div>`).join('');
+    $('#reportQuality').innerHTML=[['Prática',ss.length?Math.round(practical/ss.length*100):0],['Evidência',ss.length?Math.round(ss.filter(s=>evIds.has(s.id)).length/ss.length*100):0],['Break & Fix total',bf],['Bosses',assessments.length]].map(([a,b])=>`<div class="quality-cell"><span>${a}</span><strong>${typeof b==='number'&&a!=='Break & Fix total'&&a!=='Bosses'?b+'%':b}</strong></div>`).join('');
+    const insights=[];const english=areaMins.find(x=>x.t.id==='english')?.min||0,aws=areaMins.find(x=>x.t.id==='aws')?.min||0,dba=areaMins.find(x=>x.t.id==='dba')?.min||0;
+    if(ss.length===0)insights.push(['warn','Sem execução no período','O próximo dado precisa vir de uma sessão real, não de reorganização.']);
+    if(english===0&&ss.length>=2)insights.push(['warn','Inglês técnico ficou zerado','Acople 10–15 minutos de documentação em inglês a um lab já feito.']);
+    if(moduleProgress.filter(r=>r.lab_done&&!r.breakfix_done).length)insights.push(['warn','Há labs sem Break & Fix',`${moduleProgress.filter(r=>r.lab_done&&!r.breakfix_done).length} módulo(s) têm execução, mas ainda não provaram troubleshooting.`]);
+    if(moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length)insights.push(['','Conhecimento ainda não virou portfólio',`${moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length} módulo(s) têm evidência e ainda não têm artefato Git.`]);
+    if(aws>dba*2&&dba>0)insights.push(['','AWS está puxando a semana','Natural no horário de trabalho. Preserve ao menos um bloco de DBA fora do expediente.']);
+    if(practical&&practical===ss.length)insights.push(['good','100% das sessões foram práticas','O padrão execução > planejamento está funcionando neste período.']);
+    if(!insights.length)insights.push(['good','Baseline sendo construído','Continue registrando sessões; os padrões ficam melhores com mais amostra.']);
+    $('#reportInsights').innerHTML=insights.map(([tone,title,text])=>`<article class="insight-card ${tone}"><h4>${title}</h4><p>${text}</p></article>`).join('');
+  }
+
+  function portfolioPath(m){const mt=String(m.portfolio||'').match(/(docs\/[A-Za-z0-9_\-\/]+\.md)/);return mt?mt[1]:null}
+  function renderPortfolio(){
+    $('#portfolioProjects').innerHTML=C.tracks.map(t=>{const done=t.modules.filter(m=>recFor(t.id,m.id)?.portfolio_done).length;return `<article class="portfolio-card"><span class="kicker">${t.short}</span><h3>${escapeHtml(t.label)}</h3><p>${escapeHtml(t.description)}</p><span class="project-count">${done}/${t.modules.length}</span>
