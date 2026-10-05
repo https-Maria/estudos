@@ -37,6 +37,7 @@
       </div>
       <nav>
         <button class="nav-item active" data-view="dashboard">Painel</button>
+        <button class="nav-item" data-view="journey">Jornada</button>
         <button class="nav-item" data-view="today">Hoje</button>
         <button class="nav-item" data-view="insights">Insights</button>
         <button class="nav-item" data-view="skills">Competências</button>
@@ -57,6 +58,20 @@
 
       <section id="dashboardView" class="view">
         <div class="baseline compact-baseline"><span>BASELINE</span><p>Eu planejo, organizo e estudo sobre estudar, mas ainda não tenho consistência de execução. A partir de agora, eu meço o que fiz.</p></div>
+
+        <article class="card journey-snapshot" id="journeySnapshot">
+          <div class="journey-snapshot-main">
+            <div class="eyebrow">JORNADA DE 12 SEMANAS</div>
+            <h3 id="journeySnapshotTitle">Semana 1 · Entender o território</h3>
+            <p id="journeySnapshotText" class="muted">DBA + AWS + Inglês andando juntos, com uma evidência concreta por semana.</p>
+            <div class="journey-progress-line"><div id="journeySnapshotBar"></div></div>
+          </div>
+          <div class="journey-snapshot-side">
+            <strong id="journeyOverall">0%</strong>
+            <span>jornada construída</span>
+            <button class="secondary small" data-jump="journey">ABRIR JORNADA</button>
+          </div>
+        </article>
 
         <div class="hero-dashboard card">
           <div>
@@ -115,6 +130,42 @@
             <div id="competencyMini" class="competency-mini"></div>
           </article>
         </div>
+      </section>
+
+      <section id="journeyView" class="view hidden">
+        <div class="journey-hero">
+          <div>
+            <div class="eyebrow">SUA FORMAÇÃO, NÃO UMA LISTA DE CURSOS</div>
+            <h3>12 semanas para transformar conhecimento em competência.</h3>
+            <p>As três trilhas caminham juntas. O progresso vem das competências que você realmente marcou como aprendidas — não de vídeo assistido.</p>
+          </div>
+          <div class="journey-destination">
+            <span>DESTINO</span>
+            <strong>DBA + DP-300</strong>
+            <strong>AWS / Data Lake</strong>
+            <strong>Inglês técnico</strong>
+          </div>
+        </div>
+
+        <div class="journey-now card">
+          <div>
+            <div class="eyebrow">VOCÊ ESTÁ AQUI</div>
+            <h3 id="journeyNowTitle">Semana 1 · Entender o território</h3>
+            <p id="journeyNowWhy" class="muted"></p>
+          </div>
+          <div class="journey-now-progress">
+            <strong id="journeyNowPercent">0%</strong>
+            <span>da semana</span>
+          </div>
+        </div>
+
+        <div class="journey-lanes">
+          <div><span class="lane-dot dba"></span><strong>DBA / DP-300</strong><small>administração, diagnóstico e certificação</small></div>
+          <div><span class="lane-dot aws"></span><strong>AWS / Data Lake</strong><small>pipeline, lake e trabalho real</small></div>
+          <div><span class="lane-dot english"></span><strong>Inglês</strong><small>automatizar gramática e explicar tecnologia</small></div>
+        </div>
+
+        <div id="journeyTimeline" class="journey-timeline"></div>
       </section>
 
       <section id="todayView" class="view hidden">
@@ -202,6 +253,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./analytics.js"></script>
+  <script src="./roadmap.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
