@@ -208,4 +208,59 @@
     const t=track(trackId),i=t.modules.findIndex(m=>m.id===moduleId),m=t.modules[i],st=stepState(trackId,moduleId),p=modulePercent(trackId,moduleId);selectedTrackId=trackId;selectedModuleId=moduleId;
     $('#missionRoomHead').innerHTML=`<span class="kicker">${escapeHtml(t.label)} · QUEST ${String(i+1).padStart(2,'0')}</span><h2>${escapeHtml(m.title)}</h2><p>${escapeHtml(m.mission)}</p><div class="room-progress">${[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['PORTFÓLIO',st.portfolio],['BOSS',st.boss]].map(([n,d])=>`<span class="room-step ${d?'done':''}">${d?'✓ ':''}${n}</span>`).join('')}<span class="room-step">${p}%</span></div>`;
     const bossUnlocked=st.lab&&st.evidence&&st.breakfix;
-    $('#missionRoomBody').innerHTML=`<div class="room-section"><div class="room-section-head"><span>01 · ENTENDER</span><b>Fundamentos</b></div><h3>Conteúdo necessário</h3><div class="topic-list">${m.topics.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></div>${roomSection('02 · LAB / MISSÃO','Construir',m.mission,'lab_done',st.lab)}${roomSection('03 · BRE
+    $('#missionRoomBody').innerHTML=`<div class="room-section"><div class="room-section-head"><span>01 · ENTENDER</span><b>Fundamentos</b></div><h3>Conteúdo necessário</h3><div class="topic-list">${m.topics.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></div>${roomSection('02 · LAB / MISSÃO','Construir',m.mission,'lab_done',st.lab)}${roomSection('03 · BREAK & FIX','Quebrar e recuperar',m.breakfix,'breakfix_done',st.breakfix)}${roomSection('04 · EVIDÊNCIA','Provar',m.evidence,'evidence_done',st.evidence)}${roomSection('05 · PORTFÓLIO / GIT','Registrar',m.portfolio,'portfolio_done',st.portfolio)}<div class="room-section"><div class="room-section-head"><span>06 · BOSS BATTLE</span><b>${st.boss?'VALIDADO':bossUnlocked?'DISPONÍVEL':'BLOQUEADO'}</b></div><h3>Avaliação comigo no ChatGPT</h3><p>Conceito + prática + diagnóstico + explicação. O resultado volta para o site e valida o nível da competência.</p><div class="room-actions"><button class="btn ${bossUnlocked?'btn-danger':'btn-ghost'}" id="bossExportBtn" ${bossUnlocked?'':'disabled'}>${st.boss?'REAVALIAR':'COPIAR PACOTE PARA AVALIAÇÃO'}</button>${st.score?`<span class="room-step done">score ${st.score} · nível ${st.level}</span>`:''}</div></div><div class="room-actions"><button class="btn btn-primary" id="roomStartBtn">⚡ CONTINUAR ESTA MISSÃO</button></div>`;
+    $$('#missionRoomBody [data-toggle-progress]').forEach(b=>b.onclick=()=>toggleProgress(trackId,moduleId,b.dataset.toggleProgress));
+    $('#roomStartBtn').onclick=()=>{startModule(trackId,moduleId);$('#missionDialog').close()};
+    const boss=$('#bossExportBtn');if(boss&&!boss.disabled)boss.onclick=()=>exportAssessmentContext(trackId,moduleId);
+    $('#missionDialog').showModal();
+  }
+
+  async function toggleProgress(trackId,moduleId,field){
+    if(!features.v5){toast('Rode supabase_v5_migration.sql para salvar progresso RPG.');return}
+    const old=recFor(trackId,moduleId)||{track_id:trackId,module_id:moduleId,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};
+    const row=await store.upsertProgress({track_id:trackId,module_id:moduleId,lab_done:!!old.lab_done,evidence_done:!!old.evidence_done,breakfix_done:!!old.breakfix_done,portfolio_done:!!old.portfolio_done,assessment_score:old.assessment_score||null,validated_level:old.validated_level||null,[field]:!old[field]});
+    const idx=moduleProgress.findIndex(r=>r.track_id===trackId&&r.module_id===moduleId);if(idx>=0)moduleProgress[idx]=row;else moduleProgress.push(row);
+    renderAll();openMission(trackId,moduleId);
+  }
+
+  function startModule(trackId,moduleId){selectedTrackId=trackId;selectedModuleId=moduleId;const t=track(trackId),m=t.modules.find(x=>x.id===moduleId);$('#taskTitleInput').value=m.mission;$('#taskTitleInput').dataset.auto='0';renderToday();setView('today')}
+  function renderToday(){
+    const t=track(selectedTrackId),m=t.modules.find(x=>x.id===selectedModuleId)||t.modules[currentIndex(t)],i=t.modules.indexOf(m);$('#todayWorldPill').textContent=t.short.toUpperCase();$('#todayWorldPill').className=`world-pill ${t.id}`;$('#todayModuleLabel').textContent=`Módulo ${String(i+1).padStart(2,'0')}`;$('#todayMissionTitle').textContent=m.title;$('#todayMissionDescription').textContent=m.mission;
+    if(!currentSession&&(!$('#taskTitleInput').value||$('#taskTitleInput').dataset.auto==='1')){$('#taskTitleInput').value=m.mission;$('#taskTitleInput').dataset.auto='1'}
+    const today=dateKey(new Date());$('#todayMinutes').textContent=fmtMinutes(sessions.filter(s=>s.finished_at&&dateKey(s.started_at)===today).reduce((n,s)=>n+A.minutes(s),0));
+    Object.entries(checklist).forEach(([k,v])=>{const row=$(`#todayChecklist [data-check="${k}"]`);if(row){row.classList.toggle('done',v);row.querySelector('i').textContent=v?'●':'○'}});
+    const ev=evidence.filter(e=>dateKey(e.created_at)===today).reverse();$('#todayEvidenceList').innerHTML=ev.map(x=>`<div class="evidence-item">${escapeHtml(x.description)}</div>`).join('');
+  }
+  function renderSessionState(){const chip=$('#sessionChip');if(currentSession){chip.classList.add('live');chip.querySelector('span').textContent='sessão ativa';$('#startSessionBtn').classList.add('hidden');$('#runningPanel').classList.remove('hidden');clearInterval(timer);const tick=()=>$('#timer').textContent=clock(Date.now()-new Date(currentSession.started_at).getTime());tick();timer=setInterval(tick,1000)}else{chip.classList.remove('live');chip.querySelector('span').textContent='sem sessão ativa';$('#startSessionBtn').classList.remove('hidden');$('#runningPanel').classList.add('hidden');clearInterval(timer)}}
+
+  async function exportAssessmentContext(trackId,moduleId){
+    const t=track(trackId),m=t.modules.find(x=>x.id===moduleId),recentEvidence=evidence.filter(e=>{const s=sessions.find(x=>x.id===e.session_id);return s?.track_id===trackId&&s?.module_id===moduleId}).slice(-6).map(e=>e.description);
+    const packet={action:'BOSS_BATTLE',track_id:trackId,module_id:moduleId,track:t.label,module:m.title,topics:m.topics,lab:m.mission,breakfix:m.breakfix,evidence_expected:m.evidence,evidence_recorded:recentEvidence,instructions:'Me avalie uma questão por vez em conceito, prática, diagnóstico e explicação. Ao final gere JSON com track_id,module_id,score,validated_level,summary,strengths,gaps.'};
+    await copyText(JSON.stringify(packet,null,2));toast('Pacote da Boss Battle copiado. Cole no nosso chat.');
+  }
+
+  function renderAssessments(){
+    const ready=allModules().filter(x=>{const s=stepState(x.track.id,x.module.id);return s.lab&&s.evidence&&s.breakfix&&!s.boss});const passed=assessments.filter(a=>Number(a.score)>=70),avg=assessments.length?Math.round(assessments.reduce((n,a)=>n+Number(a.score||0),0)/assessments.length):0;
+    $('#assessmentStats').innerHTML=[['Bosses vencidos',passed.length],['Disponíveis',ready.length],['Score médio',assessments.length?`${avg}%`:'—'],['Nível 4+',assessments.filter(a=>Number(a.validated_level)>=4).length]].map(([a,b])=>`<div class="stat-tile"><span>${a}</span><strong>${b}</strong></div>`).join('');
+    const candidates=ready.length?ready:allModules().filter(x=>moduleStatus(x.track,x.index)==='current').slice(0,3);
+    $('#bossGrid').innerHTML=candidates.map(x=>{const st=stepState(x.track.id,x.module.id),available=st.lab&&st.evidence&&st.breakfix;return `<article class="boss-card ${available?'available':''}"><div class="boss-icon">⚔</div><span class="boss-difficulty">${available?'BOSS AVAILABLE':'PREPARE A MISSÃO'}</span><h3>${escapeHtml(x.module.title)}</h3><p>${escapeHtml(x.track.label)} · conceito + prática + diagnóstico + explicação</p><button class="btn ${available?'btn-danger':'btn-ghost'}" data-boss="${x.track.id}|${x.module.id}" ${available?'':'disabled'}>${available?'COPIAR PARA O CHAT':'BLOQUEADO'}</button></article>`}).join('');
+    $$('[data-boss]').forEach(b=>{if(!b.disabled)b.onclick=()=>{const [t,m]=b.dataset.boss.split('|');exportAssessmentContext(t,m)}});
+    $('#assessmentHistory').innerHTML=assessments.length?[...assessments].reverse().map(a=>{const t=track(a.track_id),m=t?.modules.find(x=>x.id===a.module_id);return `<div class="assessment-row"><strong>${escapeHtml(m?.title||a.module_id)}</strong><span>${escapeHtml(t?.short||a.track_id)}</span><span class="assessment-score">${a.score}%</span><span>Nível ${a.validated_level||'—'} · ${fmtDate(a.created_at)}</span></div>`}).join(''):'<div class="panel" style="padding:14px"><p class="muted">Nenhuma Boss Battle registrada ainda.</p></div>';
+  }
+
+  async function importAssessment(obj){
+    if(!features.v5){toast('Rode supabase_v5_migration.sql antes de importar avaliações.');return}
+    if(!obj.track_id||!obj.module_id||!Number.isFinite(Number(obj.score)))throw new Error('JSON precisa de track_id, module_id e score.');
+    const row=await store.addAssessment({track_id:obj.track_id,module_id:obj.module_id,score:Number(obj.score),validated_level:Number(obj.validated_level||0),summary:obj.summary||null,strengths:obj.strengths||[],gaps:obj.gaps||[]});assessments.push(row);
+    const old=recFor(obj.track_id,obj.module_id)||{track_id:obj.track_id,module_id:obj.module_id,lab_done:true,evidence_done:true,breakfix_done:true,portfolio_done:false};
+    const p=await store.upsertProgress({...old,track_id:obj.track_id,module_id:obj.module_id,assessment_score:Number(obj.score),validated_level:Number(obj.validated_level||0)});const i=moduleProgress.findIndex(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id);if(i>=0)moduleProgress[i]=p;else moduleProgress.push(p);renderAll();toast('Boss Battle importada e progresso atualizado.');
+  }
+
+  function sessionsIn(days){const cutoff=Date.now()-days*DAY;return sessions.filter(s=>s.finished_at&&new Date(s.started_at).getTime()>=cutoff)}
+  function renderReports(){
+    const ss=sessionsIn(reportDays),mins=ss.reduce((n,s)=>n+A.minutes(s),0),practical=ss.filter(s=>s.practical_done).length,evIds=new Set(evidence.filter(e=>new Date(e.created_at).getTime()>=Date.now()-reportDays*DAY).map(e=>e.session_id)),docs=moduleProgress.filter(r=>r.portfolio_done).length,bf=moduleProgress.filter(r=>r.breakfix_done).length;
+    $('#reportSummary').innerHTML=[['Sessões',ss.length],['Tempo',fmtMinutes(mins)],['Labs práticos',practical],['Artefatos Git',docs]].map(([a,b])=>`<div class="stat-tile"><span>${a}</span><strong>${b}</strong></div>`).join('');
+    const areaMins=C.tracks.map(t=>({t,min:ss.filter(s=>s.area===t.area).reduce((n,s)=>n+A.minutes(s),0)})),max=Math.max(1,...areaMins.map(x=>x.min));
+    $('#reportWorldBars').innerHTML=areaMins.map(x=>`<div class="metric-row"><span>${escapeHtml(x.t.short)}</span><div class="metric-bar"><div style="width:${Math.round(x.min/max*100)}%;background:${x.t.id==='dba'?'var(--copper)':x.t.id==='aws'?'var(--amber)':'var(--emerald)'}"></div></div><strong>${fmtMinutes(x.min)}</strong></div>`).join('');
+    $('#reportQuality').innerHTML=[['Prática',ss.length?Math.round(practical/ss.length*100):0],['Evidência',ss.length?Math.round(ss.filter(s=>evIds.has(s.id)).length/ss.length*100):0],['Break & Fix total',bf],['Bosses',assessments.length]].map(([a,b])=>`<div class="quality-cell"><span>${a}</span><strong>${typeof b==='number'&&a!=='Break & Fix total'&&a!=='Bosses'?b+'%':b}</strong></div>`).join('');
+    const insights=[];const english=areMins.x
