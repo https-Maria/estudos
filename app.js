@@ -244,7 +244,14 @@
           <div class="skill-node-progress"><div style="width:${p}%"></div></div>
           <div class="topic-label">CONTEÚDOS</div>
           <div class="topic-chips">${module.topics.map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
-          <div class="mission-box"><div><span>MISSÃO</span><p>${escapeHtml(module.mission)}</p></div><div><span>EVIDÊNCIA</span><p>${escapeHtml(module.evidence)}</p></div></div>
+          <div class="mission-box">
+            <div><span>LAB / MISSÃO</span><p>${escapeHtml(module.mission)}</p></div>
+            <div><span>EVIDÊNCIA</span><p>${escapeHtml(module.evidence)}</p></div>
+          </div>
+          <div class="module-practice-grid">
+            <div class="breakfix-box"><span>BREAK & FIX</span><p>${escapeHtml(module.breakfix||'')}</p></div>
+            <div class="portfolio-box"><span>PORTFÓLIO / GIT</span><p>${escapeHtml(module.portfolio||'')}</p></div>
+          </div>
           <button class="ghost small module-start" data-start-module="${i}">COMEÇAR ESTE MÓDULO</button>
         </div>
       </article>`;
