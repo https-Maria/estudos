@@ -1,8 +1,8 @@
 {
   "name": "fez-ou-nao-fez",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/analytics.test.js"
+    "test": "node tests/analytics.test.js && node tests/roadmap.test.js"
   }
 }
