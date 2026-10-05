@@ -136,4 +136,76 @@
   function totalXp(){return allModules().reduce((n,x)=>n+moduleXp(x.track.id,x.module.id),0)+sessions.filter(s=>s.finished_at).length*5}
   function levelInfo(){const xp=totalXp(),level=1+Math.floor(xp/500),within=xp%500,ranks=['Aprendiz','Operadora','Especialista','Engenheira','Arquiteta','Mentora'];return {xp,level,within,pct:Math.round(within/500*100),rank:ranks[Math.min(ranks.length-1,Math.floor((level-1)/2))]}}
   function trackPercent(t){return Math.round(t.modules.reduce((n,m)=>n+modulePercent(t.id,m.id),0)/t.modules.length)}
-  function currentIndex(t){const i=t.modu
+  function currentIndex(t){const i=t.modules.findIndex(m=>modulePercent(t.id,m.id)<80);return i<0?t.modules.length-1:i}
+  function moduleStatus(t,i){const p=modulePercent(t.id,t.modules[i].id),cur=currentIndex(t);return p>=80?'done':i===cur?'current':i<cur?'done':'future'}
+  function recommendedTrack(){const d=new Date(),day=d.getDay(),h=d.getHours();if(day>=1&&day<=5&&h>=7&&h<18)return track('aws');if(day===3||day===5)return track('english');return track('dba')}
+  function currentMission(t=recommendedTrack()){const i=currentIndex(t);return {track:t,module:t.modules[i],index:i}}
+  function phaseData(){const phases=[['BASE',0,3],['OPERAÇÃO',3,6],['BREAK & FIX',6,9],['CLOUD & AUTONOMIA',9,12]];return phases.map(([name,a,b],idx)=>{const entries=C.tracks.flatMap(t=>t.modules.slice(a,b).map(m=>modulePercent(t.id,m.id)));const pct=Math.round(entries.reduce((x,y)=>x+y,0)/entries.length);return {name,a,b,idx,pct}})}
+  function overallPercent(){const vals=allModules().map(x=>modulePercent(x.track.id,x.module.id));return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)}
+
+  async function refresh(){
+    const [s,e,c,p,mp,as]=await Promise.all([store.sessions(),store.evidence(),store.competencies(),store.parking(),store.progress(),store.assessments()]);
+    sessions=s;evidence=e;competencies=c;parking=p;features.v5=mp.ok;moduleProgress=mp.data;assessments=as.data;
+    const today=dateKey(new Date()),todays=sessions.filter(x=>dateKey(x.started_at)===today);
+    currentSession=todays.find(x=>!x.finished_at)||null;
+    if(currentSession?.track_id&&currentSession?.module_id){selectedTrackId=currentSession.track_id;selectedModuleId=currentSession.module_id;}
+    checklist={opened:todays.length>0,practical:todays.some(x=>x.practical_done),evidence:evidence.some(x=>dateKey(x.created_at)===today),logged:todays.some(x=>x.learned||x.doubt||x.next_action)};
+    renderAll();
+  }
+
+  function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
+  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
+
+  function renderHome(){
+    const m=currentMission(),st=stepState(m.track.id,m.module.id);
+    $('#missionGlyph').textContent=m.track.id==='dba'?'▣':m.track.id==='aws'?'◈':'◎';
+    $('#missionWorld').textContent=m.track.label.toUpperCase();$('#missionTitle').textContent=m.module.title;$('#missionText').textContent=m.module.mission;$('#missionXp').textContent=`+${220-moduleXp(m.track.id,m.module.id)} XP restantes`;
+    const steps=[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['GIT',st.portfolio],['BOSS',st.boss]];
+    $('#missionSteps').innerHTML=steps.map(([n,done],i)=>`<span class="quest-step ${done?'done':(!done&&steps.slice(0,i).every(x=>x[1])?'current':'')}">${done?'✓ ':''}${n}</span>`).join('');
+    $('#continueMissionBtn').onclick=()=>startModule(m.track.id,m.module.id);$('#openMissionBtn').onclick=()=>openMission(m.track.id,m.module.id);
+    $('#worldCards').innerHTML=C.tracks.map(t=>{const i=currentIndex(t),mod=t.modules[i],pct=trackPercent(t);return `<button class="world-card ${t.id}" data-open-track="${t.id}"><div class="world-card-top"><span class="world-symbol">${t.id==='dba'?'DB':t.id==='aws'?'AWS':'EN'}</span><span class="world-percent">${pct}%</span></div><h3>${escapeHtml(t.label)}</h3><p>${escapeHtml(t.description)}</p><div class="progress-track"><div style="width:${pct}%"></div></div><div class="world-now"><span>AGORA</span><strong>${escapeHtml(mod.title)}</strong></div></button>`}).join('');
+    $$('[data-open-track]').forEach(b=>b.onclick=()=>openTrack(b.dataset.openTrack));
+    renderHabit();
+    const phases=phaseData(),cur=phases.findIndex(x=>x.pct<80),current=cur<0?3:cur;
+    $('#homeQuestline').innerHTML=phases.map((p,i)=>`<div class="questline-row ${p.pct>=80?'done':i===current?'current':''}"><div class="questline-node">${p.pct>=80?'✓':i+1}</div><div><strong>${p.name}</strong><span>${i===current?'VOCÊ ESTÁ AQUI':p.pct>=80?'construído':'próxima região'}</span></div><span>${p.pct}%</span></div>`).join('');
+    const recent=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,5);
+    $('#homeRecent').innerHTML=recent.length?recent.map(s=>`<div class="recent-item"><div class="recent-item-top"><strong>${escapeHtml(s.task_title||'Sessão')}</strong><span>${fmtDate(s.started_at)} · ${A.minutes(s)}m</span></div><p>${escapeHtml(s.area)}${s.practical_done?' · prática':''}</p></div>`).join(''):'<div class="recent-item"><p>A primeira evidência ainda não existe. Comece a missão.</p></div>';
+  }
+
+  function renderHabit(){
+    const h=A.habitMap(sessions,evidence,365,new Date());
+    $('#habitCurrentStreak').textContent=h.currentStreak;$('#habitBestStreak').textContent=h.bestStreak;$('#habitHours').textContent=fmtMinutes(h.totalMinutes);
+    const monthAt=new Map(h.months.map(m=>[m.week,m.label]));const months=h.weeks.map((_,i)=>`<span>${monthAt.get(i)||''}</span>`).join('');
+    const weeks=h.weeks.map(w=>`<div class="habit-week">${w.map(d=>`<button type="button" class="habit-cell l${d.level}${d.inPeriod?'':' outside'}" ${d.inPeriod?`data-day="${d.date}"`:''} aria-label="${d.date}"></button>`).join('')}</div>`).join('');
+    $('#habitMap').innerHTML=`<div class="habit-scroll"><div class="habit-month-row"><span class="habit-axis-spacer"></span><div class="habit-months">${months}</div></div><div class="habit-body"><div class="habit-weekdays"><span>seg</span><span></span><span>qua</span><span></span><span>sex</span><span></span><span>dom</span></div><div class="habit-weeks">${weeks}</div></div></div><div class="habit-footer"><span>clique em um dia para abrir o log</span><div class="habit-legend"><span>menos</span>${[0,1,2,3,4].map(n=>`<i class="habit-cell l${n}"></i>`).join('')}<span>mais</span></div></div>`;
+    $$('#habitMap [data-day]').forEach(b=>b.onclick=()=>openDay(b.dataset.day));
+  }
+
+  function openDay(day){
+    const ss=sessions.filter(s=>dateKey(s.started_at)===day),ev=evidence.filter(e=>dateKey(e.created_at)===day),mins=ss.reduce((n,s)=>n+A.minutes(s),0);
+    $('#dayDetail').innerHTML=`<span class="kicker">${new Date(day+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}</span><h3>${ss.length} sessão(ões) · ${fmtMinutes(mins)}</h3>${ss.length?ss.map(s=>`<div class="room-section"><div class="room-section-head"><span>${escapeHtml(s.area)}</span><b>${A.minutes(s)}m</b></div><h3>${escapeHtml(s.task_title||'Sessão')}</h3><p>${s.practical_done?'✓ prática executada':'○ sem prática marcada'} · ${ev.filter(e=>e.session_id===s.id).length} evidência(s)</p></div>`).join(''):'<p class="muted">Nenhuma sessão concluída nesse dia.</p>'}`;
+    $('#dayDialog').showModal();
+  }
+
+  function renderJourney(){
+    $('#journeyPercent').textContent=`${overallPercent()}%`;const phases=phaseData(),first=phases.findIndex(p=>p.pct<80),cur=first<0?phases.length-1:first;
+    $('#journeyMap').innerHTML=phases.map((p,i)=>{const state=p.pct>=80?'done':i===cur?'current':'future';return `<article class="journey-phase ${state}"><div class="phase-head"><div><span>REGIÃO ${String(i+1).padStart(2,'0')}</span><h3>${p.name}</h3></div><strong>${p.pct}%</strong></div><div class="phase-worlds">${C.tracks.map(t=>`<div class="phase-world ${t.id}"><h4>${escapeHtml(t.label)}</h4><ul>${t.modules.slice(p.a,p.b).map(m=>`<li>${modulePercent(t.id,m.id)>=80?'✓':'◇'} ${escapeHtml(m.title)}</li>`).join('')}</ul></div>`).join('')}</div></article>`}).join('');
+  }
+
+  function openTrack(id){selectedTrackId=id;renderTrack(id);setView('track',id)}
+  function renderTrack(id){
+    const t=track(id),pct=trackPercent(t);$('#trackSources').innerHTML=t.sources.map(s=>`<span>${escapeHtml(s)}</span>`).join('');$('#trackKicker').textContent=`MUNDO · ${t.short.toUpperCase()}`;$('#trackTitle').textContent=t.label;$('#trackDescription').textContent=t.description;$('#trackPercent').textContent=`${pct}%`;
+    if(id==='aws')renderPipeline(t);else if(id==='dba')renderDbaTree(t);else renderEnglishTree(t);
+    $('#trackModules').innerHTML=t.modules.map((m,i)=>{const p=modulePercent(t.id,m.id),status=moduleStatus(t,i),st=stepState(t.id,m.id);return `<button class="module-card ${status}" data-module="${m.id}"><div class="module-head"><div><span class="module-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'PRÓXIMO'}</span><h3>${String(i+1).padStart(2,'0')} · ${escapeHtml(m.title)}</h3></div><b>${p}%</b></div><p>${escapeHtml(m.mission)}</p><div class="module-progress"><div style="width:${p}%"></div></div><div class="module-foot"><span>${st.boss?'★ validado':st.breakfix?'⚔ break/fix feito':st.lab?'lab feito':'não iniciado'}</span><b>${moduleXp(t.id,m.id)} XP</b></div></button>`}).join('');
+    $$('#trackModules [data-module]').forEach(b=>b.onclick=()=>openMission(id,b.dataset.module));
+  }
+  function renderDbaTree(t){$('#trackVisual').innerHTML=`<div class="dba-tree">${t.modules.map((m,i)=>`<button class="tree-node ${moduleStatus(t,i)}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')} · ${moduleStatus(t,i).toUpperCase()}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+  function renderPipeline(t){$('#trackVisual').innerHTML=`<div class="pipeline">${t.modules.map((m,i)=>`${i?'<span class="pipeline-arrow">→</span>':''}<button class="pipeline-node ${moduleStatus(t,i)}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+  function renderEnglishTree(t){const groups=[['FOUNDATION',0,4],['DOCUMENT & INVESTIGATE',4,8],['COMMUNICATE',8,12]];$('#trackVisual').innerHTML=`<div class="comm-tree">${groups.map(([name,a,b])=>`<div class="comm-column"><h4>${name}</h4><div class="comm-list">${t.modules.slice(a,b).map((m,k)=>`<button class="comm-node ${moduleStatus(t,a+k)}" data-vmod="${m.id}"><span>${String(a+k+1).padStart(2,'0')}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div></div>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+
+  function roomSection(code,title,text,field,done){return `<div class="room-section"><div class="room-section-head"><span>${code}</span><button class="room-toggle ${done?'done':''}" data-toggle-progress="${field}">${done?'✓ CONCLUÍDO':'MARCAR CONCLUÍDO'}</button></div><h3>${title}</h3><p>${escapeHtml(text)}</p></div>`}
+  function openMission(trackId,moduleId){
+    const t=track(trackId),i=t.modules.findIndex(m=>m.id===moduleId),m=t.modules[i],st=stepState(trackId,moduleId),p=modulePercent(trackId,moduleId);selectedTrackId=trackId;selectedModuleId=moduleId;
+    $('#missionRoomHead').innerHTML=`<span class="kicker">${escapeHtml(t.label)} · QUEST ${String(i+1).padStart(2,'0')}</span><h2>${escapeHtml(m.title)}</h2><p>${escapeHtml(m.mission)}</p><div class="room-progress">${[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['PORTFÓLIO',st.portfolio],['BOSS',st.boss]].map(([n,d])=>`<span class="room-step ${d?'done':''}">${d?'✓ ':''}${n}</span>`).join('')}<span class="room-step">${p}%</span></div>`;
+    const bossUnlocked=st.lab&&st.evidence&&st.breakfix;
+    $('#missionRoomBody').innerHTML=`<div class="room-section"><div class="room-section-head"><span>01 · ENTENDER</span><b>Fundamentos</b></div><h3>Conteúdo necessário</h3><div class="topic-list">${m.topics.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></div>${roomSection('02 · LAB / MISSÃO','Construir',m.mission,'lab_done',st.lab)}${roomSection('03 · BRE
