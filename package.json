@@ -1,8 +1,8 @@
 {
-  "name": "fez-ou-nao-fez",
-  "version": "4.0.0",
+  "name": "forge-career-rpg-os",
+  "version": "5.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/analytics.test.js && node tests/roadmap.test.js && node tests/curriculum.test.js"
+    "test": "node tests/analytics.test.js && node tests/roadmap.test.js && node tests/curriculum.test.js && node tests/v5.test.js"
   }
 }
