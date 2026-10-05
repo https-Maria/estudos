@@ -52,3 +52,17 @@ Validação executada no runtime do conector após a publicação dos arquivos.
 - páginas separadas para DBA/DP-300, AWS/Data Lake e Inglês;
 - teste estático HTML ↔ JavaScript sem IDs ausentes;
 - sintaxe de `app.js`, `analytics.js`, `curriculum.js` e `roadmap.js` validada.
+
+
+## FORGE V5
+
+Validações executadas após a reconstrução:
+- sintaxe de `app-v5.js` e `curriculum.js`;
+- 98 IDs da interface sem duplicidade;
+- referências diretas JavaScript ↔ HTML sem IDs ausentes (exceto 2 IDs criados dinamicamente pela Mission Room);
+- assets V5 presentes;
+- 3 mundos × 12 missões completos;
+- todos os módulos com conteúdo, Lab/Missão, Evidência, Break & Fix e Portfólio;
+- `supabase_v5_migration.sql` com `module_progress`, `assessments`, índices, RLS e políticas por usuário;
+- paleta temática separada para DBA, AWS e English;
+- teste automatizado `tests/v5.test.js`.
