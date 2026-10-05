@@ -21,7 +21,7 @@ for m in re.finditer(r"\$\((['\"])(#[^'\"]+)\1\)", js):
 missing = sorted(refs - set(html_ids))
 assert not missing, f'IDs referenciados no JS e ausentes no HTML: {missing}'
 
-required = ['analytics.js','roadmap.js','app.js','config.js','styles.css']
+required = ['analytics.js','curriculum.js','roadmap.js','app.js','config.js','styles.css']
 for asset in required:
     assert f'./{asset}' in html, f'Asset não referenciado: {asset}'
 
