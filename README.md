@@ -201,3 +201,58 @@ As três fontes principais são:
 3. gaps reais de inglês técnico.
 
 A Home mostra apenas o próximo passo, as três trilhas, o mapa de hábito e a jornada de 12 semanas. Ao abrir uma trilha, a skill tree mostra todos os conteúdos daquele módulo.
+
+
+# FORGE V5 — Career RPG OS
+
+A interface principal foi reconstruída como um sistema visual de progressão profissional.
+
+## Estrutura da V5
+
+- **Início / Hub** — missão atual, XP, 3 mundos, mapa de hábito e questline.
+- **Mapa da Jornada** — quatro regiões: Base, Operação, Break & Fix, Cloud & Autonomia.
+- **DBA / DP-300** — skill tree baseada no DBA_LAB persistente.
+- **Bitrix Data Lake** — pipeline visual Bitrix → NiFi → S3 → Glue/Athena → Silver/Gold → governança/orquestração.
+- **Technical English** — árvore de comunicação técnica aplicada aos projetos.
+- **Mission Room** — Entender → Lab → Break & Fix → Evidência → Portfólio → Boss Battle.
+- **Avaliações** — Boss Battles conduzidas no ChatGPT e importadas por JSON.
+- **Relatórios** — execução, qualidade da prática, gaps e insights.
+- **Portfólio** — artefatos técnicos produzidos pela própria jornada.
+- **Mapa de hábito** — 365 dias, clicável por dia.
+
+## Progresso RPG
+
+O progresso de um módulo é composto por:
+
+- Lab: 20%
+- Evidência: 15%
+- Break & Fix: 20%
+- Portfólio: 15%
+- Boss Battle aprovada: 30%
+
+XP mede atividade, não competência:
+
+- Lab: +50 XP
+- Evidência: +20 XP
+- Break & Fix: +40 XP
+- Portfólio: +30 XP
+- Boss Battle: +80 XP
+- Sessão concluída: +5 XP
+
+## Atualização do banco
+
+Quem já executou o schema anterior deve rodar apenas:
+
+`supabase_v5_migration.sql`
+
+Ela adiciona:
+- `track_id` e `module_id` às sessões;
+- `module_progress`;
+- `assessments`;
+- índices e políticas RLS.
+
+A interface básica continua abrindo sem a migração, mas progresso RPG e avaliações só persistem depois dela.
+
+## Demo
+
+`index.html?demo=1` abre a V5 com dados fictícios sem depender do Supabase.
