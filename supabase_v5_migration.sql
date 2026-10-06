@@ -119,3 +119,23 @@ using ((select auth.uid()) = user_id);
 -- select table_name from information_schema.tables
 -- where table_schema='public'
 -- and table_name in ('module_progress','assessments');
+
+
+-- ============================================================
+-- BASE TABLE PERMISSIONS — V5.2
+-- Corrige instalações antigas que tinham RLS, mas não GRANT.
+-- ============================================================
+
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on table public.study_sessions to authenticated;
+grant select, insert, update, delete on table public.evidence to authenticated;
+grant select, insert, update, delete on table public.competencies to authenticated;
+grant select, insert, update, delete on table public.parking_lot to authenticated;
+grant select, insert, update, delete on table public.module_progress to authenticated;
+grant select, insert, update, delete on table public.assessments to authenticated;
+
+alter table public.study_sessions enable row level security;
+alter table public.evidence enable row level security;
+alter table public.competencies enable row level security;
+alter table public.parking_lot enable row level security;
