@@ -255,7 +255,7 @@
   }
 
   function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
-  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
+  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=LOCAL_MODE?'modo local criptografado':(user?.email||'');$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
     const m=displayMission(),st=stepState(m.track.id,m.module.id);
@@ -469,13 +469,39 @@
   }
 
   function initBindings(){
-    document.querySelectorAll('.auth-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn').classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
     $('#togglePasswordBtn').onclick=()=>{const input=$('#password'),show=input.type==='password';input.type=show?'text':'password';$('#togglePasswordBtn').textContent=show?'ocultar':'mostrar'};
-    $('#forgotPasswordBtn').onclick=async()=>{const email=$('#email').value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação. Abra o email e volte por ele para definir uma nova senha.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
-    $('#authForm').onsubmit=async e=>{e.preventDefault();setAuthMessage('Verificando sua conta...');const email=$('#email').value.trim(),password=$('#password').value;try{
-      if(authMode==='signin'){const r=await store.signIn(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('O login não criou uma sessão válida. Confirme seu email e tente novamente.','warn')}
-      else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('Conta criada. Agora confirme o email enviado pelo Supabase e depois use a aba Entrar.','ok')}
-    }catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
+
+    if(LOCAL_MODE){
+      const exists=hasLocalVault();
+      authMode=exists?'signin':'signup';
+      $('#vaultConfirmWrap').classList.toggle('hidden',exists);
+      $('#vaultPasswordConfirm').required=!exists;
+      $('#authSubmit').textContent=exists?'Desbloquear FORGE':'Criar cofre local';
+      $('#authStatusText').textContent=exists
+        ? 'Cofre local encontrado neste navegador. Digite sua chave para abrir seus registros.'
+        : 'Primeiro acesso neste navegador: crie uma chave. Seus registros serão criptografados localmente.';
+      $('#authForm').onsubmit=async e=>{
+        e.preventDefault();
+        const pass=$('#password').value;
+        try{
+          setAuthMessage(exists?'Desbloqueando cofre...':'Criando cofre criptografado...');
+          if(exists){
+            await unlockLocalVault(pass);
+          }else{
+            const confirm=$('#vaultPasswordConfirm').value;
+            if(pass!==confirm){setAuthMessage('As duas chaves não são iguais.','warn');return}
+            if(pass.length<6){setAuthMessage('Use pelo menos 6 caracteres.','warn');return}
+            await createLocalVault(pass);
+          }
+          $('#password').value='';$('#vaultPasswordConfirm').value='';
+          await enter({id:'local-user',email:'modo local criptografado'});
+        }catch(err){setAuthMessage(err.message||String(err),'warn')}
+      };
+    }else{
+      document.querySelectorAll('.auth-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn')?.classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
+      $('#forgotPasswordBtn')?.addEventListener('click',async()=>{const email=$('#email')?.value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}});
+      $('#authForm').onsubmit=async e=>{e.preventDefault();const email=$('#email')?.value.trim(),password=$('#password').value;try{if(authMode==='signin'){const r=await store.signIn(email,password);if(r?.session?.user)await enter(r.session.user)}else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user)}}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
+    }
     $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(b=>b.onclick=()=>b.dataset.track?openTrack(b.dataset.track):setView(b.dataset.view));$$('[data-view-jump]').forEach(b=>b.onclick=()=>setView(b.dataset.viewJump));
     $('#quickStartBtn').onclick=()=>{if(currentSession){renderToday();setView('today');return}const m=displayMission();startModule(m.track.id,m.module.id)};
     $('#topBackfillBtn').onclick=()=>openBackfill();
@@ -486,7 +512,7 @@
     $('#pastTrack').onchange=()=>populatePastModules($('#pastTrack').value);
     document.querySelectorAll('[data-past-preset]').forEach(b=>b.onclick=()=>applyPastPreset(b.dataset.pastPreset));
     $('#backfillForm').onsubmit=saveBackfill;
-    $('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
+    if(!LOCAL_MODE)$('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
     $$('[data-close-dialog]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.closeDialog).close());$('#importAssessmentBtn').onclick=()=>$('#assessmentDialog').showModal();
     $('#assessmentImportForm').onsubmit=async e=>{e.preventDefault();try{const obj=JSON.parse($('#assessmentJson').value);await importAssessment(obj);$('#assessmentJson').value='';$('#assessmentDialog').close()}catch(err){toast(err.message)}};
     $$('[data-report-days]').forEach(b=>b.onclick=()=>{reportDays=Number(b.dataset.reportDays);$$('[data-report-days]').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
@@ -525,6 +551,10 @@
   async function boot(){
     $('#dateLabel').textContent=fmtLong(new Date()).toUpperCase();initBindings();
     if(DEMO){await enter({id:'demo',email:'demo@local'});return}
+    if(LOCAL_MODE){
+      $('#authView').classList.remove('hidden');$('#appView').classList.add('hidden');
+      return;
+    }
     const s=await store.session();if(s?.user)await enter(s.user);else{$('#authView').classList.remove('hidden');$('#appView').classList.add('hidden')}
     store.onAuth(async (s,event)=>{if(s?.user&&!user)await enter(s.user);if(event==='PASSWORD_RECOVERY'){if(s?.user&&!user)await enter(s.user);setTimeout(()=>$('#passwordDialog').showModal(),100)}if(!s?.user){user=null;$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden')}});
   }
