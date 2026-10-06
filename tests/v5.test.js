@@ -45,3 +45,11 @@ for (const token of ['--copper','--amber','--emerald']) {
 }
 
 console.log('v5.test.js: all assertions passed');
+
+
+for (const id of ['topBackfillBtn','dbIssueBanner','openBackfillBtn','backfillForm','pastLabComplete','pastEvidenceComplete']) {
+  assert.ok(ids.includes(id), 'V5.2 missing UI element ' + id);
+}
+for (const token of ['displayMission()','emailRedirectTo','addAnother=e.submitter','permission denied','⏱ CONTINUAR']) {
+  assert.ok(app.includes(token), 'V5.2 missing behavior ' + token);
+}
