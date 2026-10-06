@@ -59,9 +59,10 @@
       <nav class="nav">
         <span class="nav-label">JORNADA</span>
         <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span>Início</button>
+        <button class="nav-item" data-view="today"><span class="nav-icon">⚡</span>Hoje / Execução</button>
         <button class="nav-item" data-view="journey"><span class="nav-icon">◇</span>Mapa da jornada</button>
 
-        <span class="nav-label">MUNDOS</span>
+        <span class="nav-label">TRILHAS</span>
         <button class="nav-item nav-dba" data-track="dba"><span class="nav-icon">▣</span>DBA / DP-300</button>
         <button class="nav-item nav-aws" data-track="aws"><span class="nav-icon">◈</span>Bitrix Data Lake</button>
         <button class="nav-item nav-english" data-track="english"><span class="nav-icon">◎</span>Technical English</button>
@@ -89,9 +90,15 @@
         </div>
         <div class="top-actions">
           <div id="sessionChip" class="live-chip"><i></i><span>sem sessão ativa</span></div>
+          <button id="topBackfillBtn" class="btn btn-ghost btn-small">＋ PASSADO</button>
           <button id="quickStartBtn" class="btn btn-primary btn-small">⚡ COMEÇAR</button>
         </div>
       </header>
+
+      <div id="dbIssueBanner" class="db-issue-banner hidden">
+        <div><strong>O login funcionou, mas o banco bloqueou o acesso.</strong><span>Isso não é senha errada. Rode o hotfix de permissões do Supabase e recarregue a página.</span></div>
+        <a href="https://github.com/https-Maria/estudos/blob/main/supabase_permissions_hotfix.sql" target="_blank" rel="noopener">ABRIR HOTFIX ↗</a>
+      </div>
 
       <section id="homeView" class="view">
         <div class="hero">
@@ -124,8 +131,16 @@
           </div>
         </article>
 
+        <div class="flow-guide">
+          <div><b>1</b><span><strong>Escolha uma missão</strong><small>O site mostra a recomendada, mas você pode abrir qualquer trilha.</small></span></div>
+          <i>→</i>
+          <div><b>2</b><span><strong>Bata o ponto e execute</strong><small>Tempo e hábito vêm da sessão real.</small></span></div>
+          <i>→</i>
+          <div><b>3</b><span><strong>Deixe evidência</strong><small>Lab, break & fix, avaliação e Git constroem o progresso.</small></span></div>
+        </div>
+
         <div class="section-head">
-          <div><span class="kicker">SEUS MUNDOS</span><h3>Três trilhas. Uma carreira.</h3></div>
+          <div><span class="kicker">SUAS TRILHAS</span><h3>Três frentes. Uma carreira.</h3></div>
           <span class="section-note">progresso baseado em prática + validação</span>
         </div>
         <div id="worldCards" class="world-grid"></div>
@@ -272,7 +287,7 @@
         </div>
         <div id="reportSummary" class="report-summary"></div>
         <div class="report-layout">
-          <article class="panel"><span class="kicker">TEMPO POR MUNDO</span><div id="reportWorldBars" class="metric-bars"></div></article>
+          <article class="panel"><span class="kicker">TEMPO POR TRILHA</span><div id="reportWorldBars" class="metric-bars"></div></article>
           <article class="panel"><span class="kicker">QUALIDADE DA PRÁTICA</span><div id="reportQuality" class="quality-grid"></div></article>
         </div>
         <div class="section-head"><div><span class="kicker">INSIGHTS</span><h3>Próximas decisões.</h3></div></div>
@@ -348,6 +363,7 @@
 
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" data-close-dialog="backfillDialog">CANCELAR</button>
+        <button class="btn btn-secondary" type="submit" data-backfill-after="again">SALVAR + ADICIONAR OUTRA</button>
         <button class="btn btn-primary" type="submit">SALVAR NO HISTÓRICO</button>
       </div>
     </form>
