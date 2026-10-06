@@ -111,3 +111,21 @@ input,textarea{width:100%;border:1px solid var(--line);background:#0c0f10;color:
 @media(max-width:580px){
   .main{padding-left:11px;padding-right:11px}.topbar{align-items:flex-start}.top-actions{flex-direction:column;align-items:flex-end}.live-chip{font-size:.58rem}.current-quest{grid-template-columns:1fr}.quest-glyph{width:45px;height:45px}.quest-side{grid-column:1;justify-items:start}.world-grid,.boss-grid{grid-template-columns:1fr}.assessment-stats,.report-summary,.quality-grid{grid-template-columns:1fr 1fr}.habit-kpis{gap:9px}.history-head{display:none}.history-row{grid-template-columns:1fr 1fr}.history-row strong{grid-column:1/-1}.artifact-row{grid-template-columns:1fr}.execution-options{grid-template-columns:1fr}.dba-tree{grid-template-columns:1fr}.mission-room,.modal-card{padding:18px}.home-split{gap:26px}
 }
+
+
+/* V5.1 — autenticação confiável + registro retroativo */
+.password-wrap{position:relative}.password-wrap input{padding-right:78px}.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--gold);font:800 .58rem var(--mono);text-transform:uppercase}
+.auth-link{border:0;background:transparent;color:var(--muted);font-size:.69rem;text-decoration:underline;text-underline-offset:3px;padding:2px 0 0;justify-self:center}.auth-link:hover{color:var(--text)}
+.auth-status{display:flex;gap:8px;align-items:flex-start;margin:9px 0 12px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#0d1011;color:var(--muted);font-size:.65rem;line-height:1.4}.auth-status i{width:7px;height:7px;border-radius:50%;background:var(--emerald);margin-top:3px;flex:0 0 auto}
+.form-message[data-tone="warn"]{color:#e9a39e}.form-message[data-tone="ok"]{color:var(--emerald)}
+.sidebar-profile small{display:block;color:#596160;font-size:.54rem;margin-top:3px;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.backfill-card{width:min(720px,calc(100vw - 28px))}
+.backfill-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:13px 0}
+.backfill-card select{width:100%;border:1px solid var(--line);background:#0c0f10;color:var(--text);border-radius:10px;padding:12px 13px;outline:none}
+.backfill-card select:focus{border-color:#5e6768}
+.backfill-presets{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:15px 0;padding:11px;border:1px solid rgba(224,161,70,.24);border-radius:12px;background:rgba(224,161,70,.035)}
+.backfill-presets>span{width:100%;font:800 .56rem var(--mono);letter-spacing:.1em;color:var(--amber)}
+.backfill-presets button{border:1px solid var(--line);background:#121617;color:var(--soft);border-radius:999px;padding:7px 9px;font-size:.64rem}.backfill-presets button:hover{border-color:rgba(224,161,70,.45);color:var(--amber)}
+.backfill-flags{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0}
+@media(max-width:620px){.backfill-grid{grid-template-columns:1fr}.backfill-flags{display:grid;gap:2px}}
