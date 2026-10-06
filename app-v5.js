@@ -108,7 +108,7 @@
       async session(){const {data,error}=await db.auth.getSession();if(error)throw error;return data.session},
       onAuth(fn){db.auth.onAuthStateChange((event,s)=>fn(s,event))},
       async signIn(email,password){const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;return data},
-      async signUp(email,password){const {data,error}=await db.auth.signUp({email,password});if(error)throw error;return data},
+      async signUp(email,password){const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;return data},
       async resetPassword(email){const redirectTo=location.origin+location.pathname;const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;return true},
       async updatePassword(password){const {data,error}=await db.auth.updateUser({password});if(error)throw error;return data},
       async signOut(){await db.auth.signOut()},
@@ -144,6 +144,13 @@
   function moduleStatus(t,i){const p=modulePercent(t.id,t.modules[i].id),cur=currentIndex(t);return p>=80?'done':i===cur?'current':i<cur?'done':'future'}
   function recommendedTrack(){const d=new Date(),day=d.getDay(),h=d.getHours();if(day>=1&&day<=5&&h>=7&&h<18)return track('aws');if(day===3||day===5)return track('english');return track('dba')}
   function currentMission(t=recommendedTrack()){const i=currentIndex(t);return {track:t,module:t.modules[i],index:i}}
+  function displayMission(){
+    if(currentSession?.track_id&&currentSession?.module_id){
+      const t=track(currentSession.track_id),i=t?.modules.findIndex(m=>m.id===currentSession.module_id);
+      if(t&&i>=0)return {track:t,module:t.modules[i],index:i};
+    }
+    return currentMission();
+  }
   function phaseData(){const phases=[['BASE',0,3],['OPERAÇÃO',3,6],['BREAK & FIX',6,9],['CLOUD & AUTONOMIA',9,12]];return phases.map(([name,a,b],idx)=>{const entries=C.tracks.flatMap(t=>t.modules.slice(a,b).map(m=>modulePercent(t.id,m.id)));const pct=Math.round(entries.reduce((x,y)=>x+y,0)/entries.length);return {name,a,b,idx,pct}})}
   function overallPercent(){const vals=allModules().map(x=>modulePercent(x.track.id,x.module.id));return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)}
 
@@ -161,7 +168,7 @@
   function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
-    const m=currentMission(),st=stepState(m.track.id,m.module.id);
+    const m=displayMission(),st=stepState(m.track.id,m.module.id);
     $('#missionGlyph').textContent=m.track.id==='dba'?'▣':m.track.id==='aws'?'◈':'◎';
     $('#missionWorld').textContent=m.track.label.toUpperCase();$('#missionTitle').textContent=m.module.title;$('#missionText').textContent=m.module.mission;$('#missionXp').textContent=`+${220-moduleXp(m.track.id,m.module.id)} XP restantes`;
     const steps=[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['GIT',st.portfolio],['BOSS',st.boss]];
@@ -235,7 +242,7 @@
     Object.entries(checklist).forEach(([k,v])=>{const row=$(`#todayChecklist [data-check="${k}"]`);if(row){row.classList.toggle('done',v);row.querySelector('i').textContent=v?'●':'○'}});
     const ev=evidence.filter(e=>dateKey(e.created_at)===today).reverse();$('#todayEvidenceList').innerHTML=ev.map(x=>`<div class="evidence-item">${escapeHtml(x.description)}</div>`).join('');
   }
-  function renderSessionState(){const chip=$('#sessionChip');if(currentSession){chip.classList.add('live');chip.querySelector('span').textContent='sessão ativa';$('#startSessionBtn').classList.add('hidden');$('#runningPanel').classList.remove('hidden');clearInterval(timer);const tick=()=>$('#timer').textContent=clock(Date.now()-new Date(currentSession.started_at).getTime());tick();timer=setInterval(tick,1000)}else{chip.classList.remove('live');chip.querySelector('span').textContent='sem sessão ativa';$('#startSessionBtn').classList.remove('hidden');$('#runningPanel').classList.add('hidden');clearInterval(timer)}}
+  function renderSessionState(){const chip=$('#sessionChip'),quick=$('#quickStartBtn');if(currentSession){chip.classList.add('live');chip.querySelector('span').textContent='sessão ativa';quick.textContent='⏱ CONTINUAR';$('#startSessionBtn').classList.add('hidden');$('#runningPanel').classList.remove('hidden');clearInterval(timer);const tick=()=>$('#timer').textContent=clock(Date.now()-new Date(currentSession.started_at).getTime());tick();timer=setInterval(tick,1000)}else{chip.classList.remove('live');chip.querySelector('span').textContent='sem sessão ativa';quick.textContent='⚡ COMEÇAR';$('#startSessionBtn').classList.remove('hidden');$('#runningPanel').classList.add('hidden');clearInterval(timer)}}
 
   async function exportAssessmentContext(trackId,moduleId){
     const t=track(trackId),m=t.modules.find(x=>x.id===moduleId),recentEvidence=evidence.filter(e=>{const s=sessions.find(x=>x.id===e.session_id);return s?.track_id===trackId&&s?.module_id===moduleId}).slice(-6).map(e=>e.description);
@@ -284,7 +291,7 @@
     $('#portfolioArtifacts').innerHTML=allModules().map(x=>{const path=portfolioPath(x.module),done=!!recFor(x.track.id,x.module.id)?.portfolio_done;return `<div class="artifact-row"><strong>${done?'✓':'○'} ${escapeHtml(x.module.title)}</strong><span>${escapeHtml(x.track.short)}</span>${path?`<a href="${REPO_URL}/blob/main/${path}" target="_blank" rel="noopener">${done?'ABRIR':'CAMINHO'} ↗</a>`:'<span>documento integrado</span>'}</div>`}).join('');
   }
 
-  function renderHistory(){const rows=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,80);$('#historyList').innerHTML=`<div class="history-head"><span>Data</span><span>Mundo</span><span>Missão</span><span>Tempo</span><span>Humor</span><span>Prática</span></div>`+(rows.length?rows.map(s=>`<div class="history-row"><span>${fmtDate(s.started_at)}</span><span>${escapeHtml(s.area)}</span><strong>${escapeHtml(s.task_title||'Sessão')}</strong><span>${A.minutes(s)}m</span><span>${s.mood==='sim'?'😄':s.mood==='nao'?'💀':'😐'}</span><span>${s.practical_done?'✓':'○'}</span></div>`).join(''):'<p class="muted" style="padding:12px">Nenhuma sessão encerrada ainda.</p>')}
+  function renderHistory(){const rows=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,80);$('#historyList').innerHTML=`<div class="history-head"><span>Data</span><span>Mundo</span><span>Missão</span><span>Tempo</span><span>Humor</span><span>Prática</span></div>`+(rows.length?rows.map(s=>`<div class="history-row"><span>${fmtDate(s.started_at)}</span><span>${escapeHtml(s.area)}</span><strong>${escapeHtml(s.task_title||'Sessão')}</strong><span>${A.minutes(s)}m</span><span>${s.mood==='sim'?'😄':s.mood==='nao'?'💀':'😐'}</span><span>${s.practical_done?'✓':'○'}${s.notes==='Registro retroativo pelo FORGE'?' · retro':''}</span></div>`).join(''):'<p class="muted" style="padding:12px">Nenhuma sessão encerrada ainda.</p>')}
   function renderParking(){$('#parkingList').innerHTML=parking.length?parking.map(x=>`<div class="parking-item"><span>${escapeHtml(x.topic)}</span><button data-del-parking="${x.id}">×</button></div>`).join(''):'<p class="muted">Nada estacionado.</p>';$$('[data-del-parking]').forEach(b=>b.onclick=async()=>{await store.delParking(b.dataset.delParking);await refresh()})}
 
   function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
@@ -343,11 +350,13 @@
 
   async function saveBackfill(e){
     e.preventDefault();
+    const addAnother=e.submitter?.dataset.backfillAfter==='again';
     const t=track($('#pastTrack').value),moduleId=$('#pastModule').value,m=t.modules.find(x=>x.id===moduleId);
     const duration=Number($('#pastDuration').value);
     if(!duration||duration<1){toast('Informe uma duração aproximada em minutos.');return}
     const start=new Date(`${$('#pastDate').value}T${$('#pastStartTime').value}:00`);
     if(Number.isNaN(start.getTime())){toast('Data ou hora inválida.');return}
+    if(start.getTime()>Date.now()+5*60000){toast('Registro retroativo não pode começar no futuro.');return}
     const finish=new Date(start.getTime()+duration*60000);
     const practical=$('#pastPractical').checked,labComplete=$('#pastLabComplete').checked,evidenceComplete=$('#pastEvidenceComplete').checked,breakfix=$('#pastBreakfix').checked,evidenceText=$('#pastEvidence').value.trim();
     try{
@@ -357,7 +366,15 @@
         const old=recFor(t.id,m.id)||{track_id:t.id,module_id:m.id,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};
         await store.upsertProgress({...old,track_id:t.id,module_id:m.id,lab_done:old.lab_done||labComplete,evidence_done:old.evidence_done||evidenceComplete,breakfix_done:old.breakfix_done||breakfix});
       }
-      $('#backfillDialog').close();await refresh();setView('history');toast('Atividade passada registrada no histórico e no mapa de hábito.');
+      await refresh();
+      if(addAnother){
+        const keepDate=$('#pastDate').value,keepTrack=$('#pastTrack').value,keepModule=$('#pastModule').value,keepTime=$('#pastStartTime').value;
+        $('#pastDuration').value='';$('#pastTitle').value='';$('#pastEvidence').value='';$('#pastLearned').value='';$('#pastBreakfix').checked=false;$('#pastLabComplete').checked=false;$('#pastEvidenceComplete').checked=false;
+        $('#pastDate').value=keepDate;$('#pastTrack').value=keepTrack;populatePastModules(keepTrack,keepModule);$('#pastStartTime').value=keepTime;
+        toast('Salvo. Pode registrar a próxima atividade.');
+      }else{
+        $('#backfillDialog').close();setView('history');toast('Atividade passada registrada no histórico e no mapa de hábito.');
+      }
     }catch(err){toast(err.message)}
   }
 
@@ -370,7 +387,8 @@
       else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('Conta criada. Agora confirme o email enviado pelo Supabase e depois use a aba Entrar.','ok')}
     }catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
     $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(b=>b.onclick=()=>b.dataset.track?openTrack(b.dataset.track):setView(b.dataset.view));$$('[data-view-jump]').forEach(b=>b.onclick=()=>setView(b.dataset.viewJump));
-    $('#quickStartBtn').onclick=()=>{const m=currentMission();startModule(m.track.id,m.module.id)};
+    $('#quickStartBtn').onclick=()=>{if(currentSession){renderToday();setView('today');return}const m=displayMission();startModule(m.track.id,m.module.id)};
+    $('#topBackfillBtn').onclick=()=>openBackfill();
     $$('.mood-btn').forEach(b=>b.onclick=()=>{selectedMood=b.dataset.mood;$$('.mood-btn').forEach(x=>x.classList.toggle('active',x===b))});
     $('#startSessionBtn').onclick=startSession;$('#finishSessionBtn').onclick=()=>$('#finishDialog').showModal();$('#finishForm').onsubmit=finishSession;$('#evidenceForm').onsubmit=saveEvidence;$('#saveClosureBtn').onclick=saveClosure;
     $('#parkingForm').onsubmit=async e=>{e.preventDefault();const topic=$('#parkingInput').value.trim();if(!topic)return;await store.addParking(topic);$('#parkingInput').value='';await refresh()};
@@ -401,7 +419,19 @@
     try{await store.updateSession(target.id,{learned,doubt,next_action:next});$('#learnedInput').value=$('#doubtInput').value=$('#nextInput').value='';await refresh();toast('Fechamento salvo.')}catch(err){toast(err.message)}
   }
 
-  async function enter(u){user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');await store.seed(u.id);await refresh();setView('home');if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700)}
+  async function enter(u){
+    user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#dbIssueBanner')?.classList.add('hidden');
+    try{
+      await store.seed(u.id);await refresh();setView('home');
+      if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700);
+    }catch(err){
+      console.error(err);
+      const msg=String(err?.message||err);
+      if(/permission denied|row-level security|42501/i.test(msg)){
+        $('#dbIssueBanner')?.classList.remove('hidden');setView('home');toast('Sua conta entrou, mas o Supabase ainda está bloqueando as tabelas.');
+      }else toast('Não consegui carregar seus dados: '+msg);
+    }
+  }
   async function boot(){
     $('#dateLabel').textContent=fmtLong(new Date()).toUpperCase();initBindings();
     if(DEMO){await enter({id:'demo',email:'demo@local'});return}
