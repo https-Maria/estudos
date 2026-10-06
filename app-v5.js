@@ -6,11 +6,10 @@
   const qs = new URLSearchParams(location.search);
   const DEMO = qs.get('demo') === '1';
   const cfg = window.APP_CONFIG || {};
-  const LOCAL_MODE = !DEMO && cfg.LOCAL_MODE === true;
   const REPO_URL = 'https://github.com/https-Maria/estudos';
   const DAY = 86400000;
 
-  if (!DEMO && !LOCAL_MODE && (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || cfg.SUPABASE_URL.includes('SEU-PROJETO'))) {
+  if (!DEMO && (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || cfg.SUPABASE_URL.includes('SEU-PROJETO'))) {
     document.body.innerHTML = '<main style="max-width:700px;margin:80px auto;font-family:system-ui;background:#111;color:#eee;padding:28px;border-radius:18px"><h1>Falta configurar o Supabase.</h1><p>Preencha config.js ou abra <code>?demo=1</code>.</p></main>';
     return;
   }
@@ -32,9 +31,6 @@
   let sessions = [], evidence = [], competencies = [], parking = [], moduleProgress = [], assessments = [];
   let features = { v5: false };
   let checklist = { opened:false, practical:false, evidence:false, logged:false };
-  let vaultKey = null, vaultData = null;
-  const VAULT_META_KEY = 'forge_vault_meta_v1';
-  const VAULT_DATA_KEY = 'forge_vault_data_v1';
 
   const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const dateKey = (v) => A?.key ? A.key(v) : new Date(v).toISOString().slice(0,10);
@@ -63,64 +59,6 @@
     }
     toast('Copiado para a área de transferência.');
   }
-
-
-  const utf8 = new TextEncoder();
-  const utf8d = new TextDecoder();
-  const b64 = (bytes) => {
-    let bin='',step=0x8000;
-    for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode(...bytes.subarray(i,i+step));
-    return btoa(bin);
-  };
-  const fromB64 = (s) => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
-  const localId = (prefix) => `${prefix}-${crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2)}`;
-  const blankVault = () => ({sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]});
-  const hasLocalVault = () => !!localStorage.getItem(VAULT_META_KEY);
-
-  async function deriveVaultKey(passphrase,salt){
-    const material=await crypto.subtle.importKey('raw',utf8.encode(passphrase),'PBKDF2',false,['deriveKey']);
-    return crypto.subtle.deriveKey(
-      {name:'PBKDF2',salt,iterations:210000,hash:'SHA-256'},
-      material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
-    );
-  }
-  async function encryptVaultText(key,text){
-    const iv=crypto.getRandomValues(new Uint8Array(12));
-    const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,utf8.encode(text));
-    return {iv:b64(iv),data:b64(new Uint8Array(encrypted))};
-  }
-  async function decryptVaultText(key,payload){
-    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromB64(payload.iv)},key,fromB64(payload.data));
-    return utf8d.decode(plain);
-  }
-  async function persistLocalVault(){
-    if(!LOCAL_MODE||!vaultKey||!vaultData)return;
-    const encrypted=await encryptVaultText(vaultKey,JSON.stringify(vaultData));
-    localStorage.setItem(VAULT_DATA_KEY,JSON.stringify(encrypted));
-  }
-  async function createLocalVault(passphrase){
-    const salt=crypto.getRandomValues(new Uint8Array(16));
-    const key=await deriveVaultKey(passphrase,salt);
-    const check=await encryptVaultText(key,'FORGE-LOCAL-VAULT-V1');
-    localStorage.setItem(VAULT_META_KEY,JSON.stringify({version:1,salt:b64(salt),check}));
-    vaultKey=key;vaultData=blankVault();
-    await persistLocalVault();
-  }
-  async function unlockLocalVault(passphrase){
-    const raw=localStorage.getItem(VAULT_META_KEY);
-    if(!raw)throw new Error('Nenhum cofre local existe neste navegador.');
-    const meta=JSON.parse(raw);
-    const key=await deriveVaultKey(passphrase,fromB64(meta.salt));
-    try{
-      const marker=await decryptVaultText(key,meta.check);
-      if(marker!=='FORGE-LOCAL-VAULT-V1')throw new Error('invalid');
-    }catch{throw new Error('Chave de acesso incorreta.');}
-    vaultKey=key;
-    const saved=localStorage.getItem(VAULT_DATA_KEY);
-    vaultData=saved?JSON.parse(await decryptVaultText(key,JSON.parse(saved))):blankVault();
-    for(const k of ['sessions','evidence','competencies','parking','progress','assessments'])if(!Array.isArray(vaultData[k]))vaultData[k]=[];
-  }
-  function lockLocalVault(){vaultKey=null;vaultData=null;}
 
   function makeDemo() {
     const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]};
@@ -161,38 +99,6 @@
         async addAssessment(obj){const row={...obj,id:`a-${Date.now()}`,created_at:new Date().toISOString()}; d.assessments.push(row); return row;},
         async addParking(topic){const row={id:`pk-${Date.now()}`,user_id:'demo',topic,created_at:new Date().toISOString()}; d.parking.push(row); return row;},
         async delParking(id){d.parking=d.parking.filter(x=>x.id!==id)}
-      };
-    }
-
-    if (LOCAL_MODE) {
-      const need = () => { if(!vaultData) throw new Error('Cofre local bloqueado.'); return vaultData; };
-      return {
-        async session(){return vaultKey?{user:{id:'local-user',email:'modo local'}}:null},
-        onAuth(){},
-        async signIn(){throw new Error('Login do Supabase está temporariamente desligado.')},
-        async signUp(){throw new Error('Cadastro do Supabase está temporariamente desligado.')},
-        async resetPassword(){throw new Error('O modo local não usa recuperação por email.')},
-        async updatePassword(){throw new Error('O modo local usa a chave do cofre.')},
-        async signOut(){lockLocalVault();location.reload()},
-        async sessions(){return need().sessions},
-        async evidence(){return need().evidence},
-        async competencies(){return need().competencies},
-        async parking(){return need().parking},
-        async progress(){return {ok:true,data:need().progress}},
-        async assessments(){return {ok:true,data:need().assessments}},
-        async seed(userId){
-          const d=need();if(d.competencies.length)return;
-          Object.entries(defaultSkills).forEach(([area,names])=>names.forEach((name,position)=>d.competencies.push({id:localId('c'),user_id:userId,area,name,level:0,position})));
-          await persistLocalVault();
-        },
-        async insertSession(obj){const row={...obj,id:localId('s'),created_at:obj.started_at||new Date().toISOString()};need().sessions.push(row);await persistLocalVault();return row},
-        async insertPastSession(obj){const row={...obj,id:localId('past'),created_at:obj.started_at};need().sessions.push(row);await persistLocalVault();return row},
-        async updateSession(id,patch){const x=need().sessions.find(s=>s.id===id);if(!x)throw new Error('Sessão não encontrada.');Object.assign(x,patch);await persistLocalVault();return x},
-        async insertEvidence(obj){const row={...obj,id:localId('e'),created_at:obj.created_at||new Date().toISOString()};need().evidence.push(row);await persistLocalVault();return row},
-        async upsertProgress(obj){const d=need();let x=d.progress.find(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id);if(x)Object.assign(x,obj,{user_id:'local-user',updated_at:new Date().toISOString()});else{x={...obj,id:localId('p'),user_id:'local-user',updated_at:new Date().toISOString()};d.progress.push(x)}await persistLocalVault();return x},
-        async addAssessment(obj){const row={...obj,id:localId('a'),user_id:'local-user',created_at:new Date().toISOString()};need().assessments.push(row);await persistLocalVault();return row},
-        async addParking(topic){const row={id:localId('pk'),user_id:'local-user',topic,created_at:new Date().toISOString()};need().parking.push(row);await persistLocalVault();return row},
-        async delParking(id){vaultData.parking=vaultData.parking.filter(x=>x.id!==id);await persistLocalVault()}
       };
     }
 
@@ -259,7 +165,7 @@
   }
 
   function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
-  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=LOCAL_MODE?'modo local criptografado':(user?.email||'');$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
+  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
     const m=displayMission(),st=stepState(m.track.id,m.module.id);
@@ -473,39 +379,13 @@
   }
 
   function initBindings(){
+    document.querySelectorAll('.auth-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn').classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
     $('#togglePasswordBtn').onclick=()=>{const input=$('#password'),show=input.type==='password';input.type=show?'text':'password';$('#togglePasswordBtn').textContent=show?'ocultar':'mostrar'};
-
-    if(LOCAL_MODE){
-      const exists=hasLocalVault();
-      authMode=exists?'signin':'signup';
-      $('#vaultConfirmWrap').classList.toggle('hidden',exists);
-      $('#vaultPasswordConfirm').required=!exists;
-      $('#authSubmit').textContent=exists?'Desbloquear FORGE':'Criar cofre local';
-      $('#authStatusText').textContent=exists
-        ? 'Cofre local encontrado neste navegador. Digite sua chave para abrir seus registros.'
-        : 'Primeiro acesso neste navegador: crie uma chave. Seus registros serão criptografados localmente.';
-      $('#authForm').onsubmit=async e=>{
-        e.preventDefault();
-        const pass=$('#password').value;
-        try{
-          setAuthMessage(exists?'Desbloqueando cofre...':'Criando cofre criptografado...');
-          if(exists){
-            await unlockLocalVault(pass);
-          }else{
-            const confirm=$('#vaultPasswordConfirm').value;
-            if(pass!==confirm){setAuthMessage('As duas chaves não são iguais.','warn');return}
-            if(pass.length<6){setAuthMessage('Use pelo menos 6 caracteres.','warn');return}
-            await createLocalVault(pass);
-          }
-          $('#password').value='';$('#vaultPasswordConfirm').value='';
-          await enter({id:'local-user',email:'modo local criptografado'});
-        }catch(err){setAuthMessage(err.message||String(err),'warn')}
-      };
-    }else{
-      document.querySelectorAll('.auth-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn')?.classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
-      $('#forgotPasswordBtn')?.addEventListener('click',async()=>{const email=$('#email')?.value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}});
-      $('#authForm').onsubmit=async e=>{e.preventDefault();const email=$('#email')?.value.trim(),password=$('#password').value;try{if(authMode==='signin'){const r=await store.signIn(email,password);if(r?.session?.user)await enter(r.session.user)}else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user)}}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
-    }
+    $('#forgotPasswordBtn').onclick=async()=>{const email=$('#email').value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação. Abra o email e volte por ele para definir uma nova senha.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
+    $('#authForm').onsubmit=async e=>{e.preventDefault();setAuthMessage('Verificando sua conta...');const email=$('#email').value.trim(),password=$('#password').value;try{
+      if(authMode==='signin'){const r=await store.signIn(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('O login não criou uma sessão válida. Confirme seu email e tente novamente.','warn')}
+      else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('Conta criada. Agora confirme o email enviado pelo Supabase e depois use a aba Entrar.','ok')}
+    }catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
     $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(b=>b.onclick=()=>b.dataset.track?openTrack(b.dataset.track):setView(b.dataset.view));$$('[data-view-jump]').forEach(b=>b.onclick=()=>setView(b.dataset.viewJump));
     $('#quickStartBtn').onclick=()=>{if(currentSession){renderToday();setView('today');return}const m=displayMission();startModule(m.track.id,m.module.id)};
     $('#topBackfillBtn').onclick=()=>openBackfill();
@@ -516,7 +396,7 @@
     $('#pastTrack').onchange=()=>populatePastModules($('#pastTrack').value);
     document.querySelectorAll('[data-past-preset]').forEach(b=>b.onclick=()=>applyPastPreset(b.dataset.pastPreset));
     $('#backfillForm').onsubmit=saveBackfill;
-    if(!LOCAL_MODE)$('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
+    $('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
     $$('[data-close-dialog]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.closeDialog).close());$('#importAssessmentBtn').onclick=()=>$('#assessmentDialog').showModal();
     $('#assessmentImportForm').onsubmit=async e=>{e.preventDefault();try{const obj=JSON.parse($('#assessmentJson').value);await importAssessment(obj);$('#assessmentJson').value='';$('#assessmentDialog').close()}catch(err){toast(err.message)}};
     $$('[data-report-days]').forEach(b=>b.onclick=()=>{reportDays=Number(b.dataset.reportDays);$$('[data-report-days]').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
@@ -555,10 +435,6 @@
   async function boot(){
     $('#dateLabel').textContent=fmtLong(new Date()).toUpperCase();initBindings();
     if(DEMO){await enter({id:'demo',email:'demo@local'});return}
-    if(LOCAL_MODE){
-      $('#authView').classList.remove('hidden');$('#appView').classList.add('hidden');
-      return;
-    }
     const s=await store.session();if(s?.user)await enter(s.user);else{$('#authView').classList.remove('hidden');$('#appView').classList.add('hidden')}
     store.onAuth(async (s,event)=>{if(s?.user&&!user)await enter(s.user);if(event==='PASSWORD_RECOVERY'){if(s?.user&&!user)await enter(s.user);setTimeout(()=>$('#passwordDialog').showModal(),100)}if(!s?.user){user=null;$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden')}});
   }
