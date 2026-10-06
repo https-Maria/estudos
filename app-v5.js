@@ -6,10 +6,11 @@
   const qs = new URLSearchParams(location.search);
   const DEMO = qs.get('demo') === '1';
   const cfg = window.APP_CONFIG || {};
+  const LOCAL_MODE = !DEMO && cfg.LOCAL_MODE === true;
   const REPO_URL = 'https://github.com/https-Maria/estudos';
   const DAY = 86400000;
 
-  if (!DEMO && (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || cfg.SUPABASE_URL.includes('SEU-PROJETO'))) {
+  if (!DEMO && !LOCAL_MODE && (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || cfg.SUPABASE_URL.includes('SEU-PROJETO'))) {
     document.body.innerHTML = '<main style="max-width:700px;margin:80px auto;font-family:system-ui;background:#111;color:#eee;padding:28px;border-radius:18px"><h1>Falta configurar o Supabase.</h1><p>Preencha config.js ou abra <code>?demo=1</code>.</p></main>';
     return;
   }
@@ -31,6 +32,9 @@
   let sessions = [], evidence = [], competencies = [], parking = [], moduleProgress = [], assessments = [];
   let features = { v5: false };
   let checklist = { opened:false, practical:false, evidence:false, logged:false };
+  let vaultKey = null, vaultData = null;
+  const VAULT_META_KEY = 'forge_vault_meta_v1';
+  const VAULT_DATA_KEY = 'forge_vault_data_v1';
 
   const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const dateKey = (v) => A?.key ? A.key(v) : new Date(v).toISOString().slice(0,10);
@@ -59,6 +63,60 @@
     }
     toast('Copiado para a área de transferência.');
   }
+
+
+  const utf8 = new TextEncoder();
+  const utf8d = new TextDecoder();
+  const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
+  const fromB64 = (s) => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+  const localId = (prefix) => `${prefix}-${crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2)}`;
+  const blankVault = () => ({sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]});
+  const hasLocalVault = () => !!localStorage.getItem(VAULT_META_KEY);
+
+  async function deriveVaultKey(passphrase,salt){
+    const material=await crypto.subtle.importKey('raw',utf8.encode(passphrase),'PBKDF2',false,['deriveKey']);
+    return crypto.subtle.deriveKey(
+      {name:'PBKDF2',salt,iterations:210000,hash:'SHA-256'},
+      material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
+    );
+  }
+  async function encryptVaultText(key,text){
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,utf8.encode(text));
+    return {iv:b64(iv),data:b64(new Uint8Array(encrypted))};
+  }
+  async function decryptVaultText(key,payload){
+    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromB64(payload.iv)},key,fromB64(payload.data));
+    return utf8d.decode(plain);
+  }
+  async function persistLocalVault(){
+    if(!LOCAL_MODE||!vaultKey||!vaultData)return;
+    const encrypted=await encryptVaultText(vaultKey,JSON.stringify(vaultData));
+    localStorage.setItem(VAULT_DATA_KEY,JSON.stringify(encrypted));
+  }
+  async function createLocalVault(passphrase){
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const key=await deriveVaultKey(passphrase,salt);
+    const check=await encryptVaultText(key,'FORGE-LOCAL-VAULT-V1');
+    localStorage.setItem(VAULT_META_KEY,JSON.stringify({version:1,salt:b64(salt),check}));
+    vaultKey=key;vaultData=blankVault();
+    await persistLocalVault();
+  }
+  async function unlockLocalVault(passphrase){
+    const raw=localStorage.getItem(VAULT_META_KEY);
+    if(!raw)throw new Error('Nenhum cofre local existe neste navegador.');
+    const meta=JSON.parse(raw);
+    const key=await deriveVaultKey(passphrase,fromB64(meta.salt));
+    try{
+      const marker=await decryptVaultText(key,meta.check);
+      if(marker!=='FORGE-LOCAL-VAULT-V1')throw new Error('invalid');
+    }catch{throw new Error('Chave de acesso incorreta.');}
+    vaultKey=key;
+    const saved=localStorage.getItem(VAULT_DATA_KEY);
+    vaultData=saved?JSON.parse(await decryptVaultText(key,JSON.parse(saved))):blankVault();
+    for(const k of ['sessions','evidence','competencies','parking','progress','assessments'])if(!Array.isArray(vaultData[k]))vaultData[k]=[];
+  }
+  function lockLocalVault(){vaultKey=null;vaultData=null;}
 
   function makeDemo() {
     const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]};
@@ -99,6 +157,38 @@
         async addAssessment(obj){const row={...obj,id:`a-${Date.now()}`,created_at:new Date().toISOString()}; d.assessments.push(row); return row;},
         async addParking(topic){const row={id:`pk-${Date.now()}`,user_id:'demo',topic,created_at:new Date().toISOString()}; d.parking.push(row); return row;},
         async delParking(id){d.parking=d.parking.filter(x=>x.id!==id)}
+      };
+    }
+
+    if (LOCAL_MODE) {
+      const need = () => { if(!vaultData) throw new Error('Cofre local bloqueado.'); return vaultData; };
+      return {
+        async session(){return vaultKey?{user:{id:'local-user',email:'modo local'}}:null},
+        onAuth(){},
+        async signIn(){throw new Error('Login do Supabase está temporariamente desligado.')},
+        async signUp(){throw new Error('Cadastro do Supabase está temporariamente desligado.')},
+        async resetPassword(){throw new Error('O modo local não usa recuperação por email.')},
+        async updatePassword(){throw new Error('O modo local usa a chave do cofre.')},
+        async signOut(){lockLocalVault();location.reload()},
+        async sessions(){return need().sessions},
+        async evidence(){return need().evidence},
+        async competencies(){return need().competencies},
+        async parking(){return need().parking},
+        async progress(){return {ok:true,data:need().progress}},
+        async assessments(){return {ok:true,data:need().assessments}},
+        async seed(userId){
+          const d=need();if(d.competencies.length)return;
+          Object.entries(defaultSkills).forEach(([area,names])=>names.forEach((name,position)=>d.competencies.push({id:localId('c'),user_id:userId,area,name,level:0,position})));
+          await persistLocalVault();
+        },
+        async insertSession(obj){const row={...obj,id:localId('s'),created_at:obj.started_at||new Date().toISOString()};need().sessions.push(row);await persistLocalVault();return row},
+        async insertPastSession(obj){const row={...obj,id:localId('past'),created_at:obj.started_at};need().sessions.push(row);await persistLocalVault();return row},
+        async updateSession(id,patch){const x=need().sessions.find(s=>s.id===id);if(!x)throw new Error('Sessão não encontrada.');Object.assign(x,patch);await persistLocalVault();return x},
+        async insertEvidence(obj){const row={...obj,id:localId('e'),created_at:obj.created_at||new Date().toISOString()};need().evidence.push(row);await persistLocalVault();return row},
+        async upsertProgress(obj){const d=need();let x=d.progress.find(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id);if(x)Object.assign(x,obj,{user_id:'local-user',updated_at:new Date().toISOString()});else{x={...obj,id:localId('p'),user_id:'local-user',updated_at:new Date().toISOString()};d.progress.push(x)}await persistLocalVault();return x},
+        async addAssessment(obj){const row={...obj,id:localId('a'),user_id:'local-user',created_at:new Date().toISOString()};need().assessments.push(row);await persistLocalVault();return row},
+        async addParking(topic){const row={id:localId('pk'),user_id:'local-user',topic,created_at:new Date().toISOString()};need().parking.push(row);await persistLocalVault();return row},
+        async delParking(id){vaultData.parking=vaultData.parking.filter(x=>x.id!==id);await persistLocalVault()}
       };
     }
 
