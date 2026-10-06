@@ -379,7 +379,7 @@
   }
 
   function initBindings(){
-    $('.auth-tab').forEach(b=>b.onclick=()=>{$('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn').classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
+    document.querySelectorAll('.auth-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn').classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
     $('#togglePasswordBtn').onclick=()=>{const input=$('#password'),show=input.type==='password';input.type=show?'text':'password';$('#togglePasswordBtn').textContent=show?'ocultar':'mostrar'};
     $('#forgotPasswordBtn').onclick=async()=>{const email=$('#email').value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação. Abra o email e volte por ele para definir uma nova senha.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
     $('#authForm').onsubmit=async e=>{e.preventDefault();setAuthMessage('Verificando sua conta...');const email=$('#email').value.trim(),password=$('#password').value;try{
@@ -394,7 +394,7 @@
     $('#parkingForm').onsubmit=async e=>{e.preventDefault();const topic=$('#parkingInput').value.trim();if(!topic)return;await store.addParking(topic);$('#parkingInput').value='';await refresh()};
     $('#openBackfillBtn').onclick=()=>openBackfill();
     $('#pastTrack').onchange=()=>populatePastModules($('#pastTrack').value);
-    $('[data-past-preset]').forEach(b=>b.onclick=()=>applyPastPreset(b.dataset.pastPreset));
+    document.querySelectorAll('[data-past-preset]').forEach(b=>b.onclick=()=>applyPastPreset(b.dataset.pastPreset));
     $('#backfillForm').onsubmit=saveBackfill;
     $('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
     $$('[data-close-dialog]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.closeDialog).close());$('#importAssessmentBtn').onclick=()=>$('#assessmentDialog').showModal();
