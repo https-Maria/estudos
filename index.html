@@ -25,10 +25,20 @@
       </div>
       <form id="authForm" class="auth-form">
         <label>Email<input id="email" type="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
-        <label>Senha<input id="password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••"></label>
+        <label>Senha
+          <div class="password-wrap">
+            <input id="password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••">
+            <button id="togglePasswordBtn" type="button" class="password-toggle">mostrar</button>
+          </div>
+        </label>
         <button id="authSubmit" class="btn btn-primary btn-wide" type="submit">Entrar</button>
+        <button id="forgotPasswordBtn" class="auth-link" type="button">Esqueci minha senha</button>
       </form>
       <p id="authMessage" class="form-message"></p>
+      <div class="auth-status">
+        <i></i>
+        <span id="authStatusText">Entre com uma conta confirmada do Supabase. A sessão fica salva neste navegador.</span>
+      </div>
       <span class="auth-foot">Seu progresso fica protegido pelo RLS do Supabase.</span>
     </div>
   </section>
@@ -42,7 +52,7 @@
 
       <div class="sidebar-profile">
         <div class="avatar">M</div>
-        <div><strong>Maria</strong><span id="sidebarRank">Aprendiz · Lv. 1</span></div>
+        <div><strong>Maria</strong><span id="sidebarRank">Aprendiz · Lv. 1</span><small id="sidebarEmail"></small></div>
         <div class="xp-mini"><div id="sidebarXpBar"></div></div>
       </div>
 
@@ -281,7 +291,8 @@
 
       <section id="historyView" class="view hidden">
         <div class="page-hero">
-          <div><span class="kicker">LOG</span><h2>Fatos, não sensação.</h2><p>Sessões reais, tempo real e prática real.</p></div>
+          <div><span class="kicker">LOG</span><h2>Fatos, não sensação.</h2><p>Sessões reais, tempo real e prática real — inclusive atividades feitas antes de você bater ponto no FORGE.</p></div>
+          <button id="openBackfillBtn" class="btn btn-secondary">＋ REGISTRAR ATIVIDADE PASSADA</button>
         </div>
         <div class="panel"><div id="historyList" class="history-list"></div></div>
       </section>
@@ -295,6 +306,61 @@
       </section>
     </main>
   </div>
+
+  <dialog id="backfillDialog" class="modal">
+    <form id="backfillForm" class="modal-card backfill-card">
+      <button class="modal-close" type="button" data-close-dialog="backfillDialog">×</button>
+      <span class="kicker">REGISTRO RETROATIVO</span>
+      <h3>Registrar algo que você já fez</h3>
+      <p class="muted">Use para ontem, semana passada ou qualquer atividade real que ficou fora do ponto. O tempo pode ser aproximado.</p>
+
+      <div class="backfill-presets">
+        <span>ATALHOS DE ONTEM</span>
+        <button type="button" data-past-preset="nifi-setup">Configuração do Apache NiFi</button>
+        <button type="button" data-past-preset="bitrix-leads">Consumo de leads do Bitrix</button>
+        <button type="button" data-past-preset="s3-prefix">Pastas simulando prefixos S3</button>
+      </div>
+
+      <div class="backfill-grid">
+        <label class="field"><span>Data</span><input id="pastDate" type="date" required></label>
+        <label class="field"><span>Hora aproximada</span><input id="pastStartTime" type="time" value="09:00" required></label>
+        <label class="field"><span>Duração aproximada (min)</span><input id="pastDuration" type="number" min="1" max="720" step="1" placeholder="Ex.: 45" required></label>
+        <label class="field"><span>Trilha</span>
+          <select id="pastTrack" required>
+            <option value="aws">AWS / Data Lake</option>
+            <option value="dba">DBA / DP-300</option>
+            <option value="english">Technical English</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="field"><span>Módulo relacionado</span><select id="pastModule" required></select></label>
+      <label class="field"><span>Atividade realizada</span><input id="pastTitle" required placeholder="Ex.: Consumir leads do Bitrix no NiFi"></label>
+      <label class="field"><span>Evidência / resultado</span><textarea id="pastEvidence" rows="3" placeholder="Ex.: InvokeHTTP consumindo leads e FlowFiles chegando na fila."></textarea></label>
+      <label class="field"><span>O que aprendi / observação</span><textarea id="pastLearned" rows="2" placeholder="Opcional"></textarea></label>
+
+      <div class="backfill-flags">
+        <label class="toggle-row"><input id="pastPractical" type="checkbox" checked><span>Foi prática real</span></label>
+        <label class="toggle-row"><input id="pastBreakfix" type="checkbox"><span>Teve troubleshooting / break & fix</span></label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close-dialog="backfillDialog">CANCELAR</button>
+        <button class="btn btn-primary" type="submit">SALVAR NO HISTÓRICO</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="passwordDialog" class="modal small-modal">
+    <form id="passwordRecoveryForm" class="modal-card">
+      <button class="modal-close" type="button" data-close-dialog="passwordDialog">×</button>
+      <span class="kicker">RECUPERAR ACESSO</span>
+      <h3>Definir nova senha</h3>
+      <p class="muted">Você abriu um link de recuperação do Supabase. Escolha uma nova senha para esta conta.</p>
+      <label class="field"><span>Nova senha</span><input id="newPassword" type="password" minlength="8" required autocomplete="new-password"></label>
+      <div class="modal-actions"><button class="btn btn-primary" type="submit">SALVAR NOVA SENHA</button></div>
+    </form>
+  </dialog>
 
   <dialog id="missionDialog" class="modal">
     <div class="mission-room">
