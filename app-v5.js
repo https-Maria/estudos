@@ -322,6 +322,8 @@
     $('#pastEvidence').value='';
     $('#pastLearned').value='';
     $('#pastPractical').checked=true;
+    $('#pastLabComplete').checked=false;
+    $('#pastEvidenceComplete').checked=false;
     $('#pastBreakfix').checked=false;
     if(preset)applyPastPreset(preset);
     $('#backfillDialog').showModal();
@@ -347,13 +349,13 @@
     const start=new Date(`${$('#pastDate').value}T${$('#pastStartTime').value}:00`);
     if(Number.isNaN(start.getTime())){toast('Data ou hora inválida.');return}
     const finish=new Date(start.getTime()+duration*60000);
-    const practical=$('#pastPractical').checked,breakfix=$('#pastBreakfix').checked,evidenceText=$('#pastEvidence').value.trim();
+    const practical=$('#pastPractical').checked,labComplete=$('#pastLabComplete').checked,evidenceComplete=$('#pastEvidenceComplete').checked,breakfix=$('#pastBreakfix').checked,evidenceText=$('#pastEvidence').value.trim();
     try{
       const row=await store.insertPastSession({user_id:uid(),area:t.area,track_id:t.id,module_id:m.id,task_title:$('#pastTitle').value.trim(),started_at:start.toISOString(),finished_at:finish.toISOString(),duration_minutes:duration,mood:'mais-ou-menos',practical_done:practical,notes:'Registro retroativo pelo FORGE',learned:$('#pastLearned').value.trim()||null});
       if(evidenceText)await store.insertEvidence({user_id:uid(),session_id:row.id,area:t.area,description:evidenceText,created_at:finish.toISOString()});
       if(features.v5){
         const old=recFor(t.id,m.id)||{track_id:t.id,module_id:m.id,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};
-        await store.upsertProgress({...old,track_id:t.id,module_id:m.id,lab_done:old.lab_done||practical,evidence_done:old.evidence_done||!!evidenceText,breakfix_done:old.breakfix_done||breakfix});
+        await store.upsertProgress({...old,track_id:t.id,module_id:m.id,lab_done:old.lab_done||labComplete,evidence_done:old.evidence_done||evidenceComplete,breakfix_done:old.breakfix_done||breakfix});
       }
       $('#backfillDialog').close();await refresh();setView('history');toast('Atividade passada registrada no histórico e no mapa de hábito.');
     }catch(err){toast(err.message)}
