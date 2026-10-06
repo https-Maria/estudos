@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="shortcut icon" href="./favicon.svg">
   <link rel="apple-touch-icon" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles-v5.css?v=5.3.1">
+  <link rel="stylesheet" href="./styles-v5.css">
 </head>
 <body>
   <div class="ambient-grid"></div>
@@ -19,29 +19,30 @@
     <div class="auth-orbit orbit-a"></div><div class="auth-orbit orbit-b"></div>
     <div class="auth-panel">
       <div class="auth-mark"><span>F</span></div>
-      <div class="kicker">FORGE · MODO LOCAL PRIVADO</div>
-      <h1>Seu progresso.<br><em>Neste dispositivo.</em></h1>
-      <p>O login do Supabase está temporariamente desligado. O FORGE usa um cofre local criptografado neste navegador.</p>
-
+      <div class="kicker">FORGE · CAREER RPG OS</div>
+      <h1>Construa competência.<br><em>Deixe evidência.</em></h1>
+      <p>Labs reais, break & fix, avaliações e portfólio em uma jornada só.</p>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-mode="signin">Entrar</button>
+        <button class="auth-tab" data-auth-mode="signup">Criar conta</button>
+      </div>
       <form id="authForm" class="auth-form">
-        <label>Chave de acesso
+        <label>Email<input id="email" type="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
+        <label>Senha
           <div class="password-wrap">
             <input id="password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••">
             <button id="togglePasswordBtn" type="button" class="password-toggle">mostrar</button>
           </div>
         </label>
-        <label id="vaultConfirmWrap" class="hidden">Confirmar chave
-          <input id="vaultPasswordConfirm" type="password" minlength="6" autocomplete="new-password" placeholder="repita a chave">
-        </label>
-        <button id="authSubmit" class="btn btn-primary btn-wide" type="submit">Desbloquear FORGE</button>
+        <button id="authSubmit" class="btn btn-primary btn-wide" type="submit">Entrar</button>
+        <button id="forgotPasswordBtn" class="auth-link" type="button">Esqueci minha senha</button>
       </form>
-
       <p id="authMessage" class="form-message"></p>
       <div class="auth-status">
         <i></i>
-        <span id="authStatusText">Os dados ficam criptografados no armazenamento deste navegador. Não há recuperação por email.</span>
+        <span id="authStatusText">Entre com uma conta confirmada do Supabase. A sessão fica salva neste navegador.</span>
       </div>
-      <span class="auth-foot">Importante: o código do site continua público no GitHub Pages; o que fica protegido são seus registros locais.</span>
+      <span class="auth-foot">Seu progresso fica protegido pelo RLS do Supabase.</span>
     </div>
   </section>
 
@@ -54,7 +55,7 @@
 
       <div class="sidebar-profile">
         <div class="avatar">M</div>
-        <div><strong>Maria</strong><span id="sidebarRank">Aprendiz · Lv. 1</span><small id="sidebarEmail">modo local criptografado</small></div>
+        <div><strong>Maria</strong><span id="sidebarRank">Aprendiz · Lv. 1</span><small id="sidebarEmail"></small></div>
         <div class="xp-mini"><div id="sidebarXpBar"></div></div>
       </div>
 
@@ -80,7 +81,7 @@
       </nav>
 
       <div class="sidebar-bottom">
-        <button id="logoutBtn" class="sidebar-action">Bloquear cofre</button>
+        <button id="logoutBtn" class="sidebar-action">Sair</button>
       </div>
     </aside>
 
@@ -418,9 +419,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js?v=5.3.1"></script>
+  <script src="./config.js"></script>
   <script src="./analytics.js"></script>
   <script src="./curriculum.js"></script>
-  <script src="./app-v5.js?v=5.3.1"></script>
+  <script src="./app-v5.js"></script>
 </body>
 </html>
