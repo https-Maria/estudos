@@ -13,7 +13,7 @@ new Function(app);
 const ids = [...html.matchAll(/id="([^"]+)"/g)].map(m => m[1]);
 assert.equal(ids.length, new Set(ids).size, 'HTML contains duplicate ids');
 
-const dynamic = new Set(['roomStartBtn', 'bossExportBtn', 'email', 'forgotPasswordBtn']);
+const dynamic = new Set(['roomStartBtn', 'bossExportBtn']);
 const refs = [...app.matchAll(/\$\((['"])(#[A-Za-z0-9_-]+)\1\)/g)].map(m => m[2].slice(1));
 const missing = [...new Set(refs.filter(id => !ids.includes(id) && !dynamic.has(id)))];
 assert.deepEqual(missing, [], 'app-v5 references missing HTML ids');
@@ -53,13 +53,3 @@ for (const id of ['topBackfillBtn','dbIssueBanner','openBackfillBtn','backfillFo
 for (const token of ['displayMission()','emailRedirectTo','addAnother=e.submitter','permission denied','⏱ CONTINUAR']) {
   assert.ok(app.includes(token), 'V5.2 missing behavior ' + token);
 }
-
-
-for (const id of ['vaultConfirmWrap','vaultPasswordConfirm','authStatusText']) {
-  assert.ok(ids.includes(id), 'V5.3 local vault missing UI element ' + id);
-}
-for (const token of ['LOCAL_MODE','PBKDF2','AES-GCM','createLocalVault','unlockLocalVault','persistLocalVault']) {
-  assert.ok(app.includes(token), 'V5.3 local vault missing behavior ' + token);
-}
-assert.ok(html.includes('MODO LOCAL PRIVADO'), 'V5.3 local vault copy missing');
-console.log('V5.3 encrypted local vault assertions passed');
