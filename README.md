@@ -256,3 +256,16 @@ A interface básica continua abrindo sem a migração, mas progresso RPG e avali
 ## Demo
 
 `index.html?demo=1` abre a V5 com dados fictícios sem depender do Supabase.
+
+
+## V5.2 — Usabilidade
+
+A revisão V5.2 reduz ambiguidade operacional:
+- **Hoje / Execução** aparece explicitamente no menu;
+- **Registrar passado** fica acessível também pelo topo;
+- uma sessão ativa sempre prevalece sobre recomendações automáticas;
+- o botão principal vira **Continuar** quando há sessão aberta;
+- erro de permissão do Supabase é explicado como problema de banco, não de senha;
+- registro retroativo permite **Salvar + adicionar outra**;
+- atividade prática, conclusão de LAB, evidência final e Break & Fix permanecem separados;
+- confirmação de email e recuperação de senha retornam para o próprio GitHub Pages.
