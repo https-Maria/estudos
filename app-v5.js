@@ -88,10 +88,11 @@
       const d=makeDemo();
       return {
         async session(){return {user:{id:'demo',email:'demo@local'}}},
-        async signIn(){return {user:{id:'demo'}}}, async signUp(){return {user:{id:'demo'}}}, async signOut(){location.reload()}, onAuth(){},
+        async signIn(){return {user:{id:'demo',email:'demo@local'},session:{user:{id:'demo',email:'demo@local'}}}}, async signUp(){return {user:{id:'demo',email:'demo@local'},session:{user:{id:'demo',email:'demo@local'}}}}, async signOut(){location.reload()}, onAuth(){}, async resetPassword(){return true}, async updatePassword(){return true},
         async sessions(){return d.sessions}, async evidence(){return d.evidence}, async competencies(){return d.competencies}, async parking(){return d.parking},
         async progress(){return {ok:true,data:d.progress}}, async assessments(){return {ok:true,data:d.assessments}}, async seed(){},
         async insertSession(obj){const row={...obj,id:`s-${Date.now()}`}; d.sessions.push(row); return row;},
+        async insertPastSession(obj){const row={...obj,id:`past-${Date.now()}`,created_at:obj.started_at}; d.sessions.push(row); return row;},
         async updateSession(id,patch){const x=d.sessions.find(s=>s.id===id); Object.assign(x,patch); return x;},
         async insertEvidence(obj){const row={...obj,id:`e-${Date.now()}`,created_at:new Date().toISOString()}; d.evidence.push(row); return row;},
         async upsertProgress(obj){let x=d.progress.find(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id); if(x)Object.assign(x,obj,{updated_at:new Date().toISOString()}); else {x={...obj,id:`p-${Date.now()}`,updated_at:new Date().toISOString()};d.progress.push(x);} return x;},
@@ -105,9 +106,11 @@
     const safe=async(name,builder)=>{try{const r=await builder(db.from(name));if(r.error)throw r.error;return {ok:true,data:r.data||[]};}catch(e){console.warn(name,e.message);return {ok:false,data:[]};}};
     return {
       async session(){const {data,error}=await db.auth.getSession();if(error)throw error;return data.session},
-      onAuth(fn){db.auth.onAuthStateChange((_e,s)=>fn(s))},
+      onAuth(fn){db.auth.onAuthStateChange((event,s)=>fn(s,event))},
       async signIn(email,password){const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;return data},
       async signUp(email,password){const {data,error}=await db.auth.signUp({email,password});if(error)throw error;return data},
+      async resetPassword(email){const redirectTo=location.origin+location.pathname;const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;return true},
+      async updatePassword(password){const {data,error}=await db.auth.updateUser({password});if(error)throw error;return data},
       async signOut(){await db.auth.signOut()},
       async sessions(){const from=new Date(Date.now()-370*DAY).toISOString();const {data,error}=await db.from('study_sessions').select('*').gte('started_at',from).order('started_at',{ascending:true});if(error)throw error;return data||[]},
       async evidence(){const from=new Date(Date.now()-370*DAY).toISOString();const {data,error}=await db.from('evidence').select('*').gte('created_at',from).order('created_at',{ascending:true});if(error)throw error;return data||[]},
@@ -117,6 +120,7 @@
       async assessments(){return safe('assessments',q=>q.select('*').order('created_at',{ascending:true}))},
       async seed(userId){const {data,error}=await db.from('competencies').select('id').limit(1);if(error)throw error;if(data?.length)return;const rows=[];Object.entries(defaultSkills).forEach(([area,names])=>names.forEach((name,position)=>rows.push({user_id:userId,area,name,level:0,position})));const r=await db.from('competencies').insert(rows);if(r.error)throw r.error},
       async insertSession(obj){const payload={user_id:obj.user_id,area:obj.area,task_title:obj.task_title,started_at:obj.started_at,planned_start_at:obj.planned_start_at,start_latency_minutes:obj.start_latency_minutes,mood:obj.mood,practical_done:false};if(features.v5){payload.track_id=obj.track_id;payload.module_id=obj.module_id;}const {data,error}=await db.from('study_sessions').insert(payload).select().single();if(error)throw error;return data},
+      async insertPastSession(obj){const payload={user_id:obj.user_id,area:obj.area,task_title:obj.task_title,started_at:obj.started_at,finished_at:obj.finished_at,duration_minutes:obj.duration_minutes,mood:obj.mood||'mais-ou-menos',practical_done:!!obj.practical_done,notes:obj.notes||null,learned:obj.learned||null};if(features.v5){payload.track_id=obj.track_id;payload.module_id=obj.module_id;}const {data,error}=await db.from('study_sessions').insert(payload).select().single();if(error)throw error;return data},
       async updateSession(id,patch){const {data,error}=await db.from('study_sessions').update(patch).eq('id',id).select().single();if(error)throw error;return data},
       async insertEvidence(obj){const {data,error}=await db.from('evidence').insert(obj).select().single();if(error)throw error;return data},
       async upsertProgress(obj){if(!features.v5)throw new Error('migration_v5_required');const payload={...obj,user_id:uid(),updated_at:new Date().toISOString()};const {data,error}=await db.from('module_progress').upsert(payload,{onConflict:'user_id,track_id,module_id'}).select().single();if(error)throw error;return data},
@@ -154,7 +158,7 @@
   }
 
   function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
-  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
+  function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
     const m=currentMission(),st=stepState(m.track.id,m.module.id);
@@ -285,14 +289,94 @@
 
   function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
 
+  function friendlyAuthError(err){
+    const msg=String(err?.message||err||'Erro de autenticação');
+    const low=msg.toLowerCase();
+    if(low.includes('invalid login credentials')) return 'Email ou senha incorretos. Se você ainda não confirmou o email, confirme primeiro.';
+    if(low.includes('email not confirmed')) return 'Seu email ainda não foi confirmado. Abra o email do Supabase e confirme a conta.';
+    if(low.includes('user already registered')) return 'Essa conta já existe. Use a aba Entrar ou recupere a senha.';
+    if(low.includes('password should be')) return 'A senha precisa ter pelo menos 6 caracteres.';
+    if(low.includes('rate limit')) return 'Muitas tentativas em sequência. Aguarde um pouco e tente novamente.';
+    return msg;
+  }
+
+  function setAuthMessage(text,tone='info'){
+    $('#authMessage').textContent=text||'';
+    $('#authMessage').dataset.tone=tone;
+  }
+
+  function populatePastModules(trackId,selected=null){
+    const t=track(trackId),sel=$('#pastModule');
+    sel.innerHTML=t.modules.map(m=>`<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('');
+    if(selected&&t.modules.some(m=>m.id===selected))sel.value=selected;
+  }
+
+  function openBackfill(preset=null){
+    const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+    $('#pastDate').value=dateKey(yesterday);
+    $('#pastTrack').value='aws';
+    populatePastModules('aws','aws-01');
+    $('#pastStartTime').value='09:00';
+    $('#pastDuration').value='';
+    $('#pastTitle').value='';
+    $('#pastEvidence').value='';
+    $('#pastLearned').value='';
+    $('#pastPractical').checked=true;
+    $('#pastBreakfix').checked=false;
+    if(preset)applyPastPreset(preset);
+    $('#backfillDialog').showModal();
+  }
+
+  function applyPastPreset(preset){
+    $('#pastTrack').value='aws';
+    const presets={
+      'nifi-setup':{module:'aws-01',title:'Configuração do Apache NiFi',evidence:'Apache NiFi instalado/configurado e ambiente funcionando localmente.',learned:'Preparei o ambiente de ingestão e validei que o NiFi estava operacional.'},
+      'bitrix-leads':{module:'aws-01',title:'Consumo de leads do Bitrix no Apache NiFi',evidence:'Fluxo no NiFi consumindo dados de leads do Bitrix e recebendo payloads/FlowFiles.',learned:'Avancei da configuração para uma ingestão real da API do Bitrix.'},
+      's3-prefix':{module:'aws-03',title:'Organização local de pastas simulando prefixos do S3',evidence:'Estrutura local organizada em pastas para simular bucket/prefixos e visualizar como os dados serão separados no S3.',learned:'Pratiquei a organização lógica de objetos/prefixos antes de gravar no S3 real.'}
+    };
+    const p=presets[preset];if(!p)return;
+    populatePastModules('aws',p.module);
+    $('#pastTitle').value=p.title;$('#pastEvidence').value=p.evidence;$('#pastLearned').value=p.learned;
+  }
+
+  async function saveBackfill(e){
+    e.preventDefault();
+    const t=track($('#pastTrack').value),moduleId=$('#pastModule').value,m=t.modules.find(x=>x.id===moduleId);
+    const duration=Number($('#pastDuration').value);
+    if(!duration||duration<1){toast('Informe uma duração aproximada em minutos.');return}
+    const start=new Date(`${$('#pastDate').value}T${$('#pastStartTime').value}:00`);
+    if(Number.isNaN(start.getTime())){toast('Data ou hora inválida.');return}
+    const finish=new Date(start.getTime()+duration*60000);
+    const practical=$('#pastPractical').checked,breakfix=$('#pastBreakfix').checked,evidenceText=$('#pastEvidence').value.trim();
+    try{
+      const row=await store.insertPastSession({user_id:uid(),area:t.area,track_id:t.id,module_id:m.id,task_title:$('#pastTitle').value.trim(),started_at:start.toISOString(),finished_at:finish.toISOString(),duration_minutes:duration,mood:'mais-ou-menos',practical_done:practical,notes:'Registro retroativo pelo FORGE',learned:$('#pastLearned').value.trim()||null});
+      if(evidenceText)await store.insertEvidence({user_id:uid(),session_id:row.id,area:t.area,description:evidenceText,created_at:finish.toISOString()});
+      if(features.v5){
+        const old=recFor(t.id,m.id)||{track_id:t.id,module_id:m.id,lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false};
+        await store.upsertProgress({...old,track_id:t.id,module_id:m.id,lab_done:old.lab_done||practical,evidence_done:old.evidence_done||!!evidenceText,breakfix_done:old.breakfix_done||breakfix});
+      }
+      $('#backfillDialog').close();await refresh();setView('history');toast('Atividade passada registrada no histórico e no mapa de hábito.');
+    }catch(err){toast(err.message)}
+  }
+
   function initBindings(){
-    $$('.auth-tab').forEach(b=>b.onclick=()=>{$$('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta'});
-    $('#authForm').onsubmit=async e=>{e.preventDefault();$('#authMessage').textContent='processando...';try{const r=authMode==='signin'?await store.signIn($('#email').value.trim(),$('#password').value):await store.signUp($('#email').value.trim(),$('#password').value);if(r?.user)await enter(r.user);else $('#authMessage').textContent='Conta criada. Confirme o email se essa opção estiver ativa.'}catch(err){$('#authMessage').textContent=err.message}};
+    $('.auth-tab').forEach(b=>b.onclick=()=>{$('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');authMode=b.dataset.authMode;$('#authSubmit').textContent=authMode==='signin'?'Entrar':'Criar conta';$('#forgotPasswordBtn').classList.toggle('hidden',authMode!=='signin');setAuthMessage('')});
+    $('#togglePasswordBtn').onclick=()=>{const input=$('#password'),show=input.type==='password';input.type=show?'text':'password';$('#togglePasswordBtn').textContent=show?'ocultar':'mostrar'};
+    $('#forgotPasswordBtn').onclick=async()=>{const email=$('#email').value.trim();if(!email){setAuthMessage('Digite seu email acima para eu enviar a recuperação.','warn');return}try{await store.resetPassword(email);setAuthMessage('Enviei o link de recuperação. Abra o email e volte por ele para definir uma nova senha.','ok')}catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
+    $('#authForm').onsubmit=async e=>{e.preventDefault();setAuthMessage('Verificando sua conta...');const email=$('#email').value.trim(),password=$('#password').value;try{
+      if(authMode==='signin'){const r=await store.signIn(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('O login não criou uma sessão válida. Confirme seu email e tente novamente.','warn')}
+      else{const r=await store.signUp(email,password);if(r?.session?.user)await enter(r.session.user);else setAuthMessage('Conta criada. Agora confirme o email enviado pelo Supabase e depois use a aba Entrar.','ok')}
+    }catch(err){setAuthMessage(friendlyAuthError(err),'warn')}};
     $('#logoutBtn').onclick=()=>store.signOut();$$('.nav-item').forEach(b=>b.onclick=()=>b.dataset.track?openTrack(b.dataset.track):setView(b.dataset.view));$$('[data-view-jump]').forEach(b=>b.onclick=()=>setView(b.dataset.viewJump));
     $('#quickStartBtn').onclick=()=>{const m=currentMission();startModule(m.track.id,m.module.id)};
     $$('.mood-btn').forEach(b=>b.onclick=()=>{selectedMood=b.dataset.mood;$$('.mood-btn').forEach(x=>x.classList.toggle('active',x===b))});
     $('#startSessionBtn').onclick=startSession;$('#finishSessionBtn').onclick=()=>$('#finishDialog').showModal();$('#finishForm').onsubmit=finishSession;$('#evidenceForm').onsubmit=saveEvidence;$('#saveClosureBtn').onclick=saveClosure;
     $('#parkingForm').onsubmit=async e=>{e.preventDefault();const topic=$('#parkingInput').value.trim();if(!topic)return;await store.addParking(topic);$('#parkingInput').value='';await refresh()};
+    $('#openBackfillBtn').onclick=()=>openBackfill();
+    $('#pastTrack').onchange=()=>populatePastModules($('#pastTrack').value);
+    $('[data-past-preset]').forEach(b=>b.onclick=()=>applyPastPreset(b.dataset.pastPreset));
+    $('#backfillForm').onsubmit=saveBackfill;
+    $('#passwordRecoveryForm').onsubmit=async e=>{e.preventDefault();try{await store.updatePassword($('#newPassword').value);$('#newPassword').value='';$('#passwordDialog').close();toast('Senha atualizada. Seu login está pronto.')}catch(err){toast(friendlyAuthError(err))}};
     $$('[data-close-dialog]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.closeDialog).close());$('#importAssessmentBtn').onclick=()=>$('#assessmentDialog').showModal();
     $('#assessmentImportForm').onsubmit=async e=>{e.preventDefault();try{const obj=JSON.parse($('#assessmentJson').value);await importAssessment(obj);$('#assessmentJson').value='';$('#assessmentDialog').close()}catch(err){toast(err.message)}};
     $$('[data-report-days]').forEach(b=>b.onclick=()=>{reportDays=Number(b.dataset.reportDays);$$('[data-report-days]').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
@@ -320,7 +404,7 @@
     $('#dateLabel').textContent=fmtLong(new Date()).toUpperCase();initBindings();
     if(DEMO){await enter({id:'demo',email:'demo@local'});return}
     const s=await store.session();if(s?.user)await enter(s.user);else{$('#authView').classList.remove('hidden');$('#appView').classList.add('hidden')}
-    store.onAuth(async s=>{if(s?.user&&!user)await enter(s.user);if(!s?.user){user=null;$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden')}});
+    store.onAuth(async (s,event)=>{if(s?.user&&!user)await enter(s.user);if(event==='PASSWORD_RECOVERY'){if(s?.user&&!user)await enter(s.user);setTimeout(()=>$('#passwordDialog').showModal(),100)}if(!s?.user){user=null;$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden')}});
   }
   boot().catch(err=>{console.error(err);toast(`Erro ao iniciar: ${err.message}`)});
 })();
