@@ -67,7 +67,11 @@
 
   const utf8 = new TextEncoder();
   const utf8d = new TextDecoder();
-  const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
+  const b64 = (bytes) => {
+    let bin='',step=0x8000;
+    for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode(...bytes.subarray(i,i+step));
+    return btoa(bin);
+  };
   const fromB64 = (s) => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
   const localId = (prefix) => `${prefix}-${crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2)}`;
   const blankVault = () => ({sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]});
