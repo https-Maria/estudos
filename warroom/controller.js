@@ -98,6 +98,21 @@
       el.querySelectorAll('[data-war-open]').forEach(b=>b.onclick=()=>openIncident(b.dataset.warOpen));
     }
 
+    function renderAttemptHistory(){
+      const el=$('#warroomHistory');if(!el)return;
+      const completed=runs.filter(r=>r.status!=='active').slice(0,12);
+      el.innerHTML=completed.length?completed.map(r=>{
+        const i=Incidents.getIncident(r.incident_id);
+        const source=r.integrated_at?'TRILHA ATUALIZADA':'PENDENTE DE INTEGRAÇÃO';
+        return `<div class="war-history-row">
+          <div><strong>${escapeHtml(i?.title||r.incident_id)}</strong><span>${escapeHtml(r.incident_id)} · ${fmtDate(r.finished_at||r.started_at)}</span></div>
+          <span>${r.elapsed_minutes||0}m</span>
+          <span class="war-history-score">${r.score??'—'}</span>
+          <span class="war-history-status">${escapeHtml(source)}</span>
+        </div>`;
+      }).join(''):'<article class="panel war-history-empty"><p class="muted">Nenhuma tentativa encerrada ainda.</p></article>';
+    }
+
     async function openIncident(id){
       const found=Incidents.getIncident(id);if(!found)return;
       const existing=runs.find(r=>r.status==='active'&&r.incident_id===id&&r.runtime&&Object.keys(r.runtime).length);
@@ -130,6 +145,7 @@
 
     function render(){
       renderCatalog();
+      renderAttemptHistory();
       const wrap=$('#warroomWorkspace');if(!wrap)return;
       if(!incident||!run){
         wrap.innerHTML=`<article class="panel warroom-empty"><div class="warroom-empty-icon">☣</div><div><span class="kicker">FILA DE INCIDENTES</span><h3>Escolha um chamado para começar.</h3><p>O cenário não entrega a causa raiz. Você decide o que investigar, quanto tempo gastar e quando intervir.</p></div></article>`;
