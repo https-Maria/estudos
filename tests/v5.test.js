@@ -74,3 +74,9 @@ for (const id of ['warroomCatalog','warroomWorkspace']) {
 for (const token of ['createWarRun','updateWarRun','addWarEvent','warController.mount']) {
   assert.ok(app.includes(token), 'War Room V5.4 persistence missing ' + token);
 }
+
+
+for (const token of ['saveWarAssessment','integrateWarResult','onComplete:(ctx)=>integrateWarResult(ctx)','War Room encontrou um gap']) {
+  assert.ok(app.includes(token), 'War Room V5.5 learning integration missing ' + token);
+}
+assert.ok(css.includes('.assessment-source'), 'War Room V5.5 assessment source style missing');
