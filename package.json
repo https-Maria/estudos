@@ -1,8 +1,8 @@
 {
   "name": "forge-career-rpg-os",
-  "version": "5.5.0",
+  "version": "5.6.0",
   "private": true,
   "scripts": {
-    "test": "node tests/analytics.test.js && node tests/roadmap.test.js && node tests/curriculum.test.js && node tests/warroom.test.js && node tests/warroom-incident.test.js && node tests/warroom-integration.test.js && node tests/v5.test.js"
+    "test": "node tests/analytics.test.js && node tests/roadmap.test.js && node tests/curriculum.test.js && node tests/warroom.test.js && node tests/warroom-incident.test.js && node tests/warroom-integration.test.js && node tests/recall.test.js && node tests/v5.test.js"
   }
 }
