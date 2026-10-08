@@ -28,6 +28,8 @@
     }
 
     function render(){
+      const queue=dueQueue();
+      if(!activeId&&queue.length)activeId=queue[0].item.id;
       renderStats();
       renderFilters();
       renderQueue();
