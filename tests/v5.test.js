@@ -109,3 +109,8 @@ for (const token of ['.recall-signal','.module-card.recall-due','.room-step.warn
 }
 const modulePercentSource = app.slice(app.indexOf('function modulePercent'), app.indexOf('function moduleXp'));
 assert.ok(!modulePercentSource.includes('recallSignal'), 'Recall must not reduce or rewrite earned module progress');
+
+
+for (const token of ['scheduleRecallFromWar','incident.recallPlan','recallScheduled']) {
+  assert.ok(app.includes(token), 'FORGE V5.8 War Room → Recall bridge missing ' + token);
+}
