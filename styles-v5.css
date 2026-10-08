@@ -238,3 +238,18 @@ input,textarea{width:100%;border:1px solid var(--line);background:#0c0f10;color:
 .recall-history-head{margin-top:26px}.recall-history{padding:10px 13px}.recall-history-row{display:grid;grid-template-columns:minmax(0,1fr) 120px 60px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}.recall-history-row:last-child{border-bottom:0}.recall-history-row>div{display:grid;gap:3px}.recall-history-row strong{font-size:.68rem}.recall-history-row span{font-size:.58rem;color:var(--muted)}.recall-grade{font:900 .72rem var(--mono);text-align:right}.recall-grade.g0{color:var(--danger)}.recall-grade.g1{color:var(--amber)}.recall-grade.g2,.recall-grade.g3{color:var(--done)}
 @media(max-width:900px){.recall-layout{grid-template-columns:1fr}.recall-queue{grid-template-columns:1fr 1fr}.recall-self-grade{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.recall-queue{grid-template-columns:1fr}.recall-history-row{grid-template-columns:1fr 72px}.recall-history-row>span{grid-column:1}.recall-self-grade{grid-template-columns:1fr}}
+
+
+/* RECALL signals on skill map */
+.recall-signal{font-style:normal;font:800 .52rem var(--mono);letter-spacing:.04em;border:1px solid var(--line);border-radius:999px;padding:3px 6px;white-space:nowrap}
+.recall-signal.due{color:#f0a39d;border-color:rgba(216,90,84,.38);background:rgba(216,90,84,.06)}
+.recall-signal.active{color:var(--amber);border-color:rgba(224,161,70,.32);background:rgba(224,161,70,.05)}
+.recall-signal.stable{color:var(--done);border-color:rgba(115,167,125,.3);background:rgba(115,167,125,.04)}
+.world-now .recall-signal{margin-top:6px;width:max-content}
+.module-card.recall-due,.tree-node.recall-due,.pipeline-node.recall-due,.comm-node.recall-due{border-color:rgba(216,90,84,.42);box-shadow:inset 0 0 0 1px rgba(216,90,84,.04)}
+.module-card.recall-due .module-status,.tree-node.recall-due>span,.pipeline-node.recall-due>span,.comm-node.recall-due>span{color:#efaaa4}
+.phase-world li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.phase-world li.recall-due{color:var(--soft)}
+.phase-world li.recall-due b{font:800 .48rem var(--mono);color:#efaaa4;border:1px solid rgba(216,90,84,.28);border-radius:999px;padding:2px 5px}
+.room-step.warn{color:#efaaa4;border-color:rgba(216,90,84,.38)}
+.recall-room-section{border-color:rgba(224,161,70,.26);background:rgba(224,161,70,.025)}
