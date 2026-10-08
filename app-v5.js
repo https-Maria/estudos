@@ -1,6 +1,7 @@
 (() => {
   const A = window.StudyAnalytics;
   const C = window.StudyCurriculum;
+  const WRI = window.ForgeWarRoomIncidents;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const qs = new URLSearchParams(location.search);
@@ -164,7 +165,8 @@
     renderAll();
   }
 
-  function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
+  function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderWarRoom();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
+  function renderWarRoom(){if($('#warroomCount'))$('#warroomCount').textContent=String(WRI?.listIncidents?.().length||0)}
   function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
@@ -294,7 +296,7 @@
   function renderHistory(){const rows=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,80);$('#historyList').innerHTML=`<div class="history-head"><span>Data</span><span>Mundo</span><span>Missão</span><span>Tempo</span><span>Humor</span><span>Prática</span></div>`+(rows.length?rows.map(s=>`<div class="history-row"><span>${fmtDate(s.started_at)}</span><span>${escapeHtml(s.area)}</span><strong>${escapeHtml(s.task_title||'Sessão')}</strong><span>${A.minutes(s)}m</span><span>${s.mood==='sim'?'😄':s.mood==='nao'?'💀':'😐'}</span><span>${s.practical_done?'✓':'○'}${s.notes==='Registro retroativo pelo FORGE'?' · retro':''}</span></div>`).join(''):'<p class="muted" style="padding:12px">Nenhuma sessão encerrada ainda.</p>')}
   function renderParking(){$('#parkingList').innerHTML=parking.length?parking.map(x=>`<div class="parking-item"><span>${escapeHtml(x.topic)}</span><button data-del-parking="${x.id}">×</button></div>`).join(''):'<p class="muted">Nada estacionado.</p>';$$('[data-del-parking]').forEach(b=>b.onclick=async()=>{await store.delParking(b.dataset.delParking);await refresh()})}
 
-  function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
+  function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',warroom:'WAR ROOM',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
 
   function friendlyAuthError(err){
     const msg=String(err?.message||err||'Erro de autenticação');
