@@ -71,6 +71,7 @@
         <button class="nav-item nav-english" data-track="english"><span class="nav-icon">◎</span>Technical English</button>
 
         <span class="nav-label">VALIDAÇÃO</span>
+        <button class="nav-item" data-view="recall"><span class="nav-icon">↻</span>Recall</button>
         <button class="nav-item" data-view="warroom"><span class="nav-icon">☣</span>War Room</button>
         <button class="nav-item" data-view="assessments"><span class="nav-icon">⚔</span>Avaliações</button>
         <button class="nav-item" data-view="reports"><span class="nav-icon">⌁</span>Relatórios</button>
@@ -272,6 +273,31 @@
         </div>
       </section>
 
+      <section id="recallView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">RECALL ENGINE</span><h2>Conhecimento que volta antes de sumir.</h2><p>Responda de memória, compare com a rubrica e deixe o sistema decidir quando esse conteúdo deve aparecer de novo.</p></div>
+          <div class="page-stat"><strong>↻</strong><span>revisão espaçada</span></div>
+        </div>
+
+        <div id="recallStats" class="assessment-stats"></div>
+
+        <div class="section-head compact">
+          <div><span class="kicker">FILA DE REVISÃO</span><h3>O que precisa voltar agora.</h3></div>
+          <div id="recallFilters" class="recall-filters"></div>
+        </div>
+
+        <div class="recall-layout">
+          <aside id="recallQueue" class="recall-queue"></aside>
+          <main id="recallQuestion" class="recall-question"></main>
+        </div>
+
+        <div class="section-head compact recall-history-head">
+          <div><span class="kicker">HISTÓRICO</span><h3>Memória observável.</h3></div>
+          <span class="section-note">tentativa → nota → próxima revisão</span>
+        </div>
+        <article id="recallHistory" class="panel recall-history"></article>
+      </section>
+
       <section id="warroomView" class="view hidden">
         <div class="page-hero">
           <div><span class="kicker">WAR ROOM</span><h2>Incidentes profissionais. Sem gabarito visível.</h2><p>Investigue por evidências, comunique impacto, escolha ações e lide com as consequências.</p></div>
@@ -452,6 +478,9 @@
   <script src="./warroom/incidents.js"></script>
   <script src="./warroom/incidents/dba-blocking-01.js"></script>
   <script src="./warroom/controller.js"></script>
+  <script src="./recall/engine.js"></script>
+  <script src="./recall/items.js"></script>
+  <script src="./recall/controller.js"></script>
   <script src="./app-v5.js"></script>
 </body>
 </html>
