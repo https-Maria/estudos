@@ -272,6 +272,30 @@
       return {...weighted,slaPenalty:penalty};
     },
 
+    recallPlan(run){
+      const plan=[];
+      const add=(itemId,dueInDays,reason)=>{
+        if(!plan.some(x=>x.itemId===itemId))plan.push({itemId,dueInDays,reason});
+      };
+
+      if(!has(run,'check_requests')||has(run,'kill_random')||has(run,'restart_sql')){
+        add('recall-dba04-01',0,'Reforçar identificação do bloqueador raiz e da blocking chain.');
+      }
+      if(!has(run,'check_waits')||has(run,'restart_sql')){
+        add('recall-dba04-02',0,'Reforçar leitura de wait types de lock.');
+      }
+      if(!has(run,'check_open_tran')||!has(run,'inspect_session57')||has(run,'restart_sql')){
+        add('recall-dba04-03',0,'Reforçar transação aberta em sessão sleeping.');
+      }
+
+      if(!plan.length){
+        add('recall-dba04-01',3,'Consolidar o raciocínio de blocking chain após uma boa resolução.');
+        add('recall-dba04-03',5,'Revisar retenção de locks por transações abertas.');
+        add('recall-dba04-02',7,'Manter reconhecimento de wait types de lock.');
+      }
+      return plan;
+    },
+
     debrief(run,score){
       const good=[];
       const gaps=[];
