@@ -25,8 +25,33 @@
     const fmtDate=v=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(v));
     let runs=[],activeDbRun=null,run=null,incident=null,busy=false,consoleMessage='';
 
+    async function integrateRun(dbRow){
+      if(!opts.onComplete||dbRow?.integrated_at||!['resolved','failed'].includes(dbRow?.status))return dbRow;
+      const found=Incidents.getIncident(dbRow.incident_id);
+      if(!found||!dbRow.runtime||!Object.keys(dbRow.runtime).length)return dbRow;
+      const runtime=Engine.deserialize(dbRow.runtime);
+      runtime.runId=dbRow.id;
+      const score=found.score(runtime,Scoring);
+      const debrief=found.debrief(runtime,score);
+      await opts.onComplete({incident:found,run:runtime,score,debrief,dbRun:dbRow});
+      const integrated_at=new Date().toISOString();
+      const updated=await opts.updateRun(dbRow.id,{integrated_at,updated_at:integrated_at});
+      return {...dbRow,...updated,integrated_at};
+    }
+
+    async function syncPendingIntegrations(){
+      for(let i=0;i<runs.length;i++){
+        const row=runs[i];
+        if(!row.integrated_at&&['resolved','failed'].includes(row.status)){
+          try{runs[i]=await integrateRun(row)}
+          catch(err){console.warn('War Room integration',err);opts.toast('Incidente salvo, mas a integração com a trilha será tentada novamente.')}
+        }
+      }
+    }
+
     async function refreshRuns(){
       runs=await opts.listRuns();
+      await syncPendingIntegrations();
       const active=runs.find(r=>r.status==='active'&&r.runtime&&Object.keys(r.runtime).length);
       if(active){
         const found=Incidents.getIncident(active.incident_id);
@@ -242,11 +267,22 @@
           });
           activeDbRun={...activeDbRun,...patch};
         }
-        await opts.updateRun(activeDbRun.id,patch);
+        const saved=await opts.updateRun(activeDbRun.id,patch);
         const idx=runs.findIndex(r=>r.id===activeDbRun.id);
-        if(idx>=0)runs[idx]={...runs[idx],...patch};else runs.unshift({...activeDbRun,...patch});
+        if(idx>=0)runs[idx]={...runs[idx],...patch,...saved};else runs.unshift({...activeDbRun,...patch,...saved});
+        activeDbRun=idx>=0?runs[idx]:runs[0];
+        if(run.resolved||run.failed){
+          try{
+            activeDbRun=await integrateRun(activeDbRun);
+            const pos=runs.findIndex(r=>r.id===activeDbRun.id);
+            if(pos>=0)runs[pos]=activeDbRun;
+          }catch(err){
+            console.warn('War Room integration',err);
+            opts.toast('Incidente salvo. A integração com a trilha será tentada novamente.');
+          }
+        }
         render();
-        if(run.resolved)opts.toast('Incidente encerrado. Debrief liberado.');
+        if(run.resolved)opts.toast(activeDbRun?.integrated_at?'Incidente encerrado e integrado à sua trilha.':'Incidente encerrado. Debrief liberado.');
       }catch(err){opts.toast(err.message||String(err))}
       finally{busy=false}
     }
