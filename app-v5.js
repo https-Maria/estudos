@@ -35,7 +35,7 @@
   let selectedTrackId = 'aws';
   let selectedModuleId = 'aws-01';
   let reportDays = 7;
-  let sessions = [], evidence = [], competencies = [], parking = [], moduleProgress = [], assessments = [];
+  let sessions = [], evidence = [], competencies = [], parking = [], moduleProgress = [], assessments = [], recallProgress = [], recallAttempts = [];
   let features = { v5: false };
   let checklist = { opened:false, practical:false, evidence:false, logged:false };
 
@@ -49,6 +49,23 @@
   const track = (id) => C.getTrack(id);
   const allModules = () => C.tracks.flatMap((t) => t.modules.map((m,i) => ({track:t,module:m,index:i})));
   const recFor = (trackId,moduleId) => moduleProgress.find((r) => r.track_id===trackId && r.module_id===moduleId) || null;
+  function recallSignal(trackId,moduleId){
+    const items=RB?.byModule?.(trackId,moduleId)||[];
+    if(!items.length)return {kind:'none',due:0,started:0,total:0,label:''};
+    const rows=items.map(i=>recallProgress.find(p=>p.item_id===i.id)).filter(Boolean);
+    if(!rows.length)return {kind:'none',due:0,started:0,total:items.length,label:''};
+    const due=rows.filter(p=>RE?.isDue?.(p,new Date())).length;
+    const stable=rows.length===items.length&&rows.every(p=>Number(p.stage||0)>=4);
+    if(due)return {kind:'due',due,started:rows.length,total:items.length,label:`↻ ${due} revisão${due>1?'ões':''}`};
+    if(stable)return {kind:'stable',due:0,started:rows.length,total:items.length,label:'✓ memória estável'};
+    return {kind:'active',due:0,started:rows.length,total:items.length,label:'↻ memória ativa'};
+  }
+  function recallDueForTrack(trackId){
+    return track(trackId)?.modules.reduce((n,m)=>n+recallSignal(trackId,m.id).due,0)||0;
+  }
+  function totalRecallDue(){
+    return C.tracks.reduce((n,t)=>n+recallDueForTrack(t.id),0);
+  }
 
   function toast(msg) {
     const el = $('#toast');
@@ -170,11 +187,17 @@
   const recallController=RC?.createController({
     engine:RE,
     bank:RB,
-    listProgress:()=>store.recallProgress(),
-    listAttempts:()=>store.recallAttempts(),
+    listProgress:()=>recallProgress,
+    listAttempts:()=>recallAttempts,
     addAttempt:(obj)=>store.addRecallAttempt(obj),
     upsertProgress:(obj)=>store.upsertRecallProgress(obj),
-    onChanged:async()=>{},
+    onChanged:async({progress})=>{
+      const pi=recallProgress.findIndex(p=>p.item_id===progress.item_id);
+      if(pi>=0)recallProgress[pi]=progress;else recallProgress.push(progress);
+      recallAttempts=await store.recallAttempts();
+      renderHome();renderJourney();renderReports();
+      if(!$('#trackView')?.classList.contains('hidden'))renderTrack(selectedTrackId);
+    },
     toast
   })||null;
 
@@ -239,8 +262,8 @@
   function overallPercent(){const vals=allModules().map(x=>modulePercent(x.track.id,x.module.id));return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)}
 
   async function refresh(){
-    const [s,e,c,p,mp,as]=await Promise.all([store.sessions(),store.evidence(),store.competencies(),store.parking(),store.progress(),store.assessments()]);
-    sessions=s;evidence=e;competencies=c;parking=p;features.v5=mp.ok;moduleProgress=mp.data;assessments=as.data;
+    const [s,e,c,p,mp,as,rp,ra]=await Promise.all([store.sessions(),store.evidence(),store.competencies(),store.parking(),store.progress(),store.assessments(),store.recallProgress(),store.recallAttempts()]);
+    sessions=s;evidence=e;competencies=c;parking=p;features.v5=mp.ok;moduleProgress=mp.data;assessments=as.data;recallProgress=rp;recallAttempts=ra;
     const today=dateKey(new Date()),todays=sessions.filter(x=>dateKey(x.started_at)===today);
     currentSession=todays.find(x=>!x.finished_at)||null;
     if(currentSession?.track_id&&currentSession?.module_id){selectedTrackId=currentSession.track_id;selectedModuleId=currentSession.module_id;}
@@ -260,7 +283,7 @@
     const steps=[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['GIT',st.portfolio],['BOSS',st.boss]];
     $('#missionSteps').innerHTML=steps.map(([n,done],i)=>`<span class="quest-step ${done?'done':(!done&&steps.slice(0,i).every(x=>x[1])?'current':'')}">${done?'✓ ':''}${n}</span>`).join('');
     $('#continueMissionBtn').onclick=()=>startModule(m.track.id,m.module.id);$('#openMissionBtn').onclick=()=>openMission(m.track.id,m.module.id);
-    $('#worldCards').innerHTML=C.tracks.map(t=>{const i=currentIndex(t),mod=t.modules[i],pct=trackPercent(t);return `<button class="world-card ${t.id}" data-open-track="${t.id}"><div class="world-card-top"><span class="world-symbol">${t.id==='dba'?'DB':t.id==='aws'?'AWS':'EN'}</span><span class="world-percent">${pct}%</span></div><h3>${escapeHtml(t.label)}</h3><p>${escapeHtml(t.description)}</p><div class="progress-track"><div style="width:${pct}%"></div></div><div class="world-now"><span>AGORA</span><strong>${escapeHtml(mod.title)}</strong></div></button>`}).join('');
+    $('#worldCards').innerHTML=C.tracks.map(t=>{const i=currentIndex(t),mod=t.modules[i],pct=trackPercent(t),due=recallDueForTrack(t.id);return `<button class="world-card ${t.id}" data-open-track="${t.id}"><div class="world-card-top"><span class="world-symbol">${t.id==='dba'?'DB':t.id==='aws'?'AWS':'EN'}</span><span class="world-percent">${pct}%</span></div><h3>${escapeHtml(t.label)}</h3><p>${escapeHtml(t.description)}</p><div class="progress-track"><div style="width:${pct}%"></div></div><div class="world-now"><span>AGORA</span><strong>${escapeHtml(mod.title)}</strong>${due?`<em class="recall-signal due">↻ ${due} revisão${due>1?'ões':''}</em>`:''}</div></button>`}).join('');
     $$('[data-open-track]').forEach(b=>b.onclick=()=>openTrack(b.dataset.openTrack));
     renderHabit();
     const phases=phaseData(),cur=phases.findIndex(x=>x.pct<80),current=cur<0?3:cur;
@@ -286,28 +309,30 @@
 
   function renderJourney(){
     $('#journeyPercent').textContent=`${overallPercent()}%`;const phases=phaseData(),first=phases.findIndex(p=>p.pct<80),cur=first<0?phases.length-1:first;
-    $('#journeyMap').innerHTML=phases.map((p,i)=>{const state=p.pct>=80?'done':i===cur?'current':'future';return `<article class="journey-phase ${state}"><div class="phase-head"><div><span>REGIÃO ${String(i+1).padStart(2,'0')}</span><h3>${p.name}</h3></div><strong>${p.pct}%</strong></div><div class="phase-worlds">${C.tracks.map(t=>`<div class="phase-world ${t.id}"><h4>${escapeHtml(t.label)}</h4><ul>${t.modules.slice(p.a,p.b).map(m=>`<li>${modulePercent(t.id,m.id)>=80?'✓':'◇'} ${escapeHtml(m.title)}</li>`).join('')}</ul></div>`).join('')}</div></article>`}).join('');
+    $('#journeyMap').innerHTML=phases.map((p,i)=>{const state=p.pct>=80?'done':i===cur?'current':'future';return `<article class="journey-phase ${state}"><div class="phase-head"><div><span>REGIÃO ${String(i+1).padStart(2,'0')}</span><h3>${p.name}</h3></div><strong>${p.pct}%</strong></div><div class="phase-worlds">${C.tracks.map(t=>`<div class="phase-world ${t.id}"><h4>${escapeHtml(t.label)}</h4><ul>${t.modules.slice(p.a,p.b).map(m=>{const rs=recallSignal(t.id,m.id);return `<li class="${rs.kind==='due'?'recall-due':''}">${modulePercent(t.id,m.id)>=80?'✓':'◇'} ${escapeHtml(m.title)}${rs.kind==='due'?'<b>↻ revisar</b>':''}</li>`}).join('')}</ul></div>`).join('')}</div></article>`}).join('');
   }
 
   function openTrack(id){selectedTrackId=id;renderTrack(id);setView('track',id)}
   function renderTrack(id){
     const t=track(id),pct=trackPercent(t);$('#trackSources').innerHTML=t.sources.map(s=>`<span>${escapeHtml(s)}</span>`).join('');$('#trackKicker').textContent=`MUNDO · ${t.short.toUpperCase()}`;$('#trackTitle').textContent=t.label;$('#trackDescription').textContent=t.description;$('#trackPercent').textContent=`${pct}%`;
     if(id==='aws')renderPipeline(t);else if(id==='dba')renderDbaTree(t);else renderEnglishTree(t);
-    $('#trackModules').innerHTML=t.modules.map((m,i)=>{const p=modulePercent(t.id,m.id),status=moduleStatus(t,i),st=stepState(t.id,m.id);return `<button class="module-card ${status}" data-module="${m.id}"><div class="module-head"><div><span class="module-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'PRÓXIMO'}</span><h3>${String(i+1).padStart(2,'0')} · ${escapeHtml(m.title)}</h3></div><b>${p}%</b></div><p>${escapeHtml(m.mission)}</p><div class="module-progress"><div style="width:${p}%"></div></div><div class="module-foot"><span>${st.boss?'★ validado':st.breakfix?'⚔ break/fix feito':st.lab?'lab feito':'não iniciado'}</span><b>${moduleXp(t.id,m.id)} XP</b></div></button>`}).join('');
+    $('#trackModules').innerHTML=t.modules.map((m,i)=>{const p=modulePercent(t.id,m.id),status=moduleStatus(t,i),st=stepState(t.id,m.id),rs=recallSignal(t.id,m.id);return `<button class="module-card ${status} ${rs.kind==='due'?'recall-due':''}" data-module="${m.id}"><div class="module-head"><div><span class="module-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'PRÓXIMO'}${rs.kind==='due'?' · ↻ REVISAR':''}</span><h3>${String(i+1).padStart(2,'0')} · ${escapeHtml(m.title)}</h3></div><b>${p}%</b></div><p>${escapeHtml(m.mission)}</p><div class="module-progress"><div style="width:${p}%"></div></div><div class="module-foot"><span>${rs.label?`<em class="recall-signal ${rs.kind}">${escapeHtml(rs.label)}</em> · `:''}${st.boss?'★ validado':st.breakfix?'⚔ break/fix feito':st.lab?'lab feito':'não iniciado'}</span><b>${moduleXp(t.id,m.id)} XP</b></div></button>`}).join('');
     $$('#trackModules [data-module]').forEach(b=>b.onclick=()=>openMission(id,b.dataset.module));
   }
-  function renderDbaTree(t){$('#trackVisual').innerHTML=`<div class="dba-tree">${t.modules.map((m,i)=>`<button class="tree-node ${moduleStatus(t,i)}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')} · ${moduleStatus(t,i).toUpperCase()}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
-  function renderPipeline(t){$('#trackVisual').innerHTML=`<div class="pipeline">${t.modules.map((m,i)=>`${i?'<span class="pipeline-arrow">→</span>':''}<button class="pipeline-node ${moduleStatus(t,i)}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
-  function renderEnglishTree(t){const groups=[['FOUNDATION',0,4],['DOCUMENT & INVESTIGATE',4,8],['COMMUNICATE',8,12]];$('#trackVisual').innerHTML=`<div class="comm-tree">${groups.map(([name,a,b])=>`<div class="comm-column"><h4>${name}</h4><div class="comm-list">${t.modules.slice(a,b).map((m,k)=>`<button class="comm-node ${moduleStatus(t,a+k)}" data-vmod="${m.id}"><span>${String(a+k+1).padStart(2,'0')}</span><strong>${escapeHtml(m.title)}</strong></button>`).join('')}</div></div>`).join('')}</div>`;$$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+  function renderDbaTree(t){$('#trackVisual').innerHTML=`<div class="dba-tree">${t.modules.map((m,i)=>{const rs=recallSignal(t.id,m.id);return `<button class="tree-node ${moduleStatus(t,i)} ${rs.kind==='due'?'recall-due':''}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')} · ${moduleStatus(t,i).toUpperCase()}${rs.kind==='due'?' · ↻ REVISAR':''}</span><strong>${escapeHtml(m.title)}</strong></button>`}).join('')}</div>`;$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+  function renderPipeline(t){$('#trackVisual').innerHTML=`<div class="pipeline">${t.modules.map((m,i)=>{const rs=recallSignal(t.id,m.id);return `${i?'<span class="pipeline-arrow">→</span>':''}<button class="pipeline-node ${moduleStatus(t,i)} ${rs.kind==='due'?'recall-due':''}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')}${rs.kind==='due'?' · ↻':''}</span><strong>${escapeHtml(m.title)}</strong></button>`}).join('')}</div>`;$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
+  function renderEnglishTree(t){const groups=[['FOUNDATION',0,4],['DOCUMENT & INVESTIGATE',4,8],['COMMUNICATE',8,12]];$('#trackVisual').innerHTML=`<div class="comm-tree">${groups.map(([name,a,b])=>`<div class="comm-column"><h4>${name}</h4><div class="comm-list">${t.modules.slice(a,b).map((m,k)=>{const rs=recallSignal(t.id,m.id);return `<button class="comm-node ${moduleStatus(t,a+k)} ${rs.kind==='due'?'recall-due':''}" data-vmod="${m.id}"><span>${String(a+k+1).padStart(2,'0')}${rs.kind==='due'?' · ↻ REVISAR':''}</span><strong>${escapeHtml(m.title)}</strong></button>`}).join('')}</div></div>`).join('')}</div>`;$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
 
   function roomSection(code,title,text,field,done){return `<div class="room-section"><div class="room-section-head"><span>${code}</span><button class="room-toggle ${done?'done':''}" data-toggle-progress="${field}">${done?'✓ CONCLUÍDO':'MARCAR CONCLUÍDO'}</button></div><h3>${title}</h3><p>${escapeHtml(text)}</p></div>`}
   function openMission(trackId,moduleId){
     const t=track(trackId),i=t.modules.findIndex(m=>m.id===moduleId),m=t.modules[i],st=stepState(trackId,moduleId),p=modulePercent(trackId,moduleId);selectedTrackId=trackId;selectedModuleId=moduleId;
-    $('#missionRoomHead').innerHTML=`<span class="kicker">${escapeHtml(t.label)} · QUEST ${String(i+1).padStart(2,'0')}</span><h2>${escapeHtml(m.title)}</h2><p>${escapeHtml(m.mission)}</p><div class="room-progress">${[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['PORTFÓLIO',st.portfolio],['BOSS',st.boss]].map(([n,d])=>`<span class="room-step ${d?'done':''}">${d?'✓ ':''}${n}</span>`).join('')}<span class="room-step">${p}%</span></div>`;
+    const rs=recallSignal(trackId,moduleId),recallItems=RB?.byModule?.(trackId,moduleId)||[];
+    $('#missionRoomHead').innerHTML=`<span class="kicker">${escapeHtml(t.label)} · QUEST ${String(i+1).padStart(2,'0')}</span><h2>${escapeHtml(m.title)}</h2><p>${escapeHtml(m.mission)}</p><div class="room-progress">${[['LAB',st.lab],['EVIDÊNCIA',st.evidence],['BREAK & FIX',st.breakfix],['PORTFÓLIO',st.portfolio],['BOSS',st.boss]].map(([n,d])=>`<span class="room-step ${d?'done':''}">${d?'✓ ':''}${n}</span>`).join('')}${rs.label?`<span class="room-step ${rs.kind==='due'?'warn':''}">${escapeHtml(rs.label)}</span>`:''}<span class="room-step">${p}%</span></div>`;
     const bossUnlocked=st.lab&&st.evidence&&st.breakfix;
-    $('#missionRoomBody').innerHTML=`<div class="room-section"><div class="room-section-head"><span>01 · ENTENDER</span><b>Fundamentos</b></div><h3>Conteúdo necessário</h3><div class="topic-list">${m.topics.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></div>${roomSection('02 · LAB / MISSÃO','Construir',m.mission,'lab_done',st.lab)}${roomSection('03 · BREAK & FIX','Quebrar e recuperar',m.breakfix,'breakfix_done',st.breakfix)}${roomSection('04 · EVIDÊNCIA','Provar',m.evidence,'evidence_done',st.evidence)}${roomSection('05 · PORTFÓLIO / GIT','Registrar',m.portfolio,'portfolio_done',st.portfolio)}<div class="room-section"><div class="room-section-head"><span>06 · BOSS BATTLE</span><b>${st.boss?'VALIDADO':bossUnlocked?'DISPONÍVEL':'BLOQUEADO'}</b></div><h3>Avaliação comigo no ChatGPT</h3><p>Conceito + prática + diagnóstico + explicação. O resultado volta para o site e valida o nível da competência.</p><div class="room-actions"><button class="btn ${bossUnlocked?'btn-danger':'btn-ghost'}" id="bossExportBtn" ${bossUnlocked?'':'disabled'}>${st.boss?'REAVALIAR':'COPIAR PACOTE PARA AVALIAÇÃO'}</button>${st.score?`<span class="room-step done">score ${st.score} · nível ${st.level}</span>`:''}</div></div><div class="room-actions"><button class="btn btn-primary" id="roomStartBtn">⚡ CONTINUAR ESTA MISSÃO</button></div>`;
+    $('#missionRoomBody').innerHTML=`<div class="room-section"><div class="room-section-head"><span>01 · ENTENDER</span><b>Fundamentos</b></div><h3>Conteúdo necessário</h3><div class="topic-list">${m.topics.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></div>${roomSection('02 · LAB / MISSÃO','Construir',m.mission,'lab_done',st.lab)}${roomSection('03 · BREAK & FIX','Quebrar e recuperar',m.breakfix,'breakfix_done',st.breakfix)}${roomSection('04 · EVIDÊNCIA','Provar',m.evidence,'evidence_done',st.evidence)}${roomSection('05 · PORTFÓLIO / GIT','Registrar',m.portfolio,'portfolio_done',st.portfolio)}${recallItems.length?`<div class="room-section recall-room-section"><div class="room-section-head"><span>06 · RECALL</span><b>${rs.kind==='due'?'PRECISA REVISÃO':rs.kind==='stable'?'ESTÁVEL':rs.started?'EM CONSOLIDAÇÃO':'NÃO INICIADO'}</b></div><h3>Retenção ao longo do tempo</h3><p>O progresso conquistado não diminui. O Recall apenas sinaliza quando este conhecimento precisa voltar para a memória.</p><div class="room-actions"><button class="btn ${rs.kind==='due'?'btn-danger':'btn-secondary'}" id="openRecallModuleBtn">↻ ${rs.kind==='due'?'REVISAR AGORA':'ABRIR RECALL'}</button>${rs.started?`<span class="room-step">${rs.started}/${rs.total} itens iniciados</span>`:''}</div></div>`:''}<div class="room-section"><div class="room-section-head"><span>${recallItems.length?'07':'06'} · BOSS BATTLE</span><b>${st.boss?'VALIDADO':bossUnlocked?'DISPONÍVEL':'BLOQUEADO'}</b></div><h3>Avaliação comigo no ChatGPT</h3><p>Conceito + prática + diagnóstico + explicação. O resultado volta para o site e valida o nível da competência.</p><div class="room-actions"><button class="btn ${bossUnlocked?'btn-danger':'btn-ghost'}" id="bossExportBtn" ${bossUnlocked?'':'disabled'}>${st.boss?'REAVALIAR':'COPIAR PACOTE PARA AVALIAÇÃO'}</button>${st.score?`<span class="room-step done">score ${st.score} · nível ${st.level}</span>`:''}</div></div><div class="room-actions"><button class="btn btn-primary" id="roomStartBtn">⚡ CONTINUAR ESTA MISSÃO</button></div>`;
     $$('#missionRoomBody [data-toggle-progress]').forEach(b=>b.onclick=()=>toggleProgress(trackId,moduleId,b.dataset.toggleProgress));
     $('#roomStartBtn').onclick=()=>{startModule(trackId,moduleId);$('#missionDialog').close()};
+    const recallBtn=$('#openRecallModuleBtn');if(recallBtn)recallBtn.onclick=()=>{$('#missionDialog').close();setView('recall');recallController?.openModule(trackId,moduleId)};
     const boss=$('#bossExportBtn');if(boss&&!boss.disabled)boss.onclick=()=>exportAssessmentContext(trackId,moduleId);
     $('#missionDialog').showModal();
   }
@@ -367,6 +392,8 @@
     if(moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length)insights.push(['','Conhecimento ainda não virou portfólio',`${moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length} módulo(s) têm evidência e ainda não têm artefato Git.`]);
     if(aws>dba*2&&dba>0)insights.push(['','AWS está puxando a semana','Natural no horário de trabalho. Preserve ao menos um bloco de DBA fora do expediente.']);
     if(practical&&practical===ss.length)insights.push(['good','100% das sessões foram práticas','O padrão execução > planejamento está funcionando neste período.']);
+    const recallDue=totalRecallDue();
+    if(recallDue)insights.push(['warn','Conhecimento pedindo revisão',`${recallDue} item(ns) do Recall estão vencidos. Isso não reduz seu nível; só indica que é hora de recuperar a memória.`]);
     const latestWar=[...assessments].filter(a=>a.source_type==='war_room').sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
     if(latestWar?.gaps?.length)insights.push(['warn','War Room encontrou um gap',String(latestWar.gaps[0])]);
     else if(latestWar&&Number(latestWar.score)>=85)insights.push(['good','War Room validou autonomia prática',`Último incidente: ${latestWar.score}% e nível ${latestWar.validated_level||'—'}.`]);
