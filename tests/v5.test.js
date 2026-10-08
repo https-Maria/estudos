@@ -85,3 +85,17 @@ assert.ok(css.includes('.assessment-source'), 'War Room V5.5 assessment source s
 for (const id of ['warroomHistory']) {
   assert.ok(ids.includes(id), 'War Room V5.5 missing attempt history UI ' + id);
 }
+
+
+for (const asset of ['recall/engine.js','recall/items.js','recall/controller.js']) {
+  assert.ok(html.includes('./' + asset), 'Recall V5.6 missing asset ' + asset);
+}
+for (const id of ['recallView','recallStats','recallFilters','recallQueue','recallQuestion','recallHistory']) {
+  assert.ok(ids.includes(id), 'Recall V5.6 missing UI element ' + id);
+}
+for (const token of ['recallProgress','recallAttempts','addRecallAttempt','upsertRecallProgress','recallController.mount']) {
+  assert.ok(app.includes(token), 'Recall V5.6 persistence/runtime missing ' + token);
+}
+for (const token of ['.recall-layout','.recall-queue-item','.recall-rubric']) {
+  assert.ok(css.includes(token), 'Recall V5.6 style missing ' + token);
+}
