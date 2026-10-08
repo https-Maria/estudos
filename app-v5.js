@@ -100,7 +100,8 @@
         async updateSession(id,patch){const x=d.sessions.find(s=>s.id===id); Object.assign(x,patch); return x;},
         async insertEvidence(obj){const row={...obj,id:`e-${Date.now()}`,created_at:new Date().toISOString()}; d.evidence.push(row); return row;},
         async upsertProgress(obj){let x=d.progress.find(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id); if(x)Object.assign(x,obj,{updated_at:new Date().toISOString()}); else {x={...obj,id:`p-${Date.now()}`,updated_at:new Date().toISOString()};d.progress.push(x);} return x;},
-        async addAssessment(obj){const row={...obj,id:`a-${Date.now()}`,created_at:new Date().toISOString()}; d.assessments.push(row); return row;},
+        async addAssessment(obj){const row={...obj,source_type:obj.source_type||'boss_chat',id:`a-${Date.now()}`,created_at:new Date().toISOString()}; d.assessments.push(row); return row;},
+        async saveWarAssessment(obj){let row=d.assessments.find(a=>a.source_type==='war_room'&&a.source_id===obj.source_id);if(row)Object.assign(row,obj,{source_type:'war_room'});else{row={...obj,source_type:'war_room',id:`a-war-${Date.now()}`,created_at:new Date().toISOString()};d.assessments.push(row)}return row},
         async addParking(topic){const row={id:`pk-${Date.now()}`,user_id:'demo',topic,created_at:new Date().toISOString()}; d.parking.push(row); return row;},
         async delParking(id){d.parking=d.parking.filter(x=>x.id!==id)},
         async warRuns(){return [...d.warRuns].sort((a,b)=>new Date(b.started_at)-new Date(a.started_at))},
@@ -132,7 +133,8 @@
       async updateSession(id,patch){const {data,error}=await db.from('study_sessions').update(patch).eq('id',id).select().single();if(error)throw error;return data},
       async insertEvidence(obj){const {data,error}=await db.from('evidence').insert(obj).select().single();if(error)throw error;return data},
       async upsertProgress(obj){if(!features.v5)throw new Error('migration_v5_required');const payload={...obj,user_id:uid(),updated_at:new Date().toISOString()};const {data,error}=await db.from('module_progress').upsert(payload,{onConflict:'user_id,track_id,module_id'}).select().single();if(error)throw error;return data},
-      async addAssessment(obj){if(!features.v5)throw new Error('migration_v5_required');const {data,error}=await db.from('assessments').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
+      async addAssessment(obj){if(!features.v5)throw new Error('migration_v5_required');const {data,error}=await db.from('assessments').insert({...obj,source_type:obj.source_type||'boss_chat',user_id:uid()}).select().single();if(error)throw error;return data},
+      async saveWarAssessment(obj){if(!features.v5)throw new Error('migration_v5_required');const existing=await db.from('assessments').select('*').eq('source_type','war_room').eq('source_id',obj.source_id).maybeSingle();if(existing.error)throw existing.error;if(existing.data){const {data,error}=await db.from('assessments').update({...obj,source_type:'war_room'}).eq('id',existing.data.id).select().single();if(error)throw error;return data}const {data,error}=await db.from('assessments').insert({...obj,source_type:'war_room',user_id:uid()}).select().single();if(error)throw error;return data},
       async addParking(topic){const {data,error}=await db.from('parking_lot').insert({user_id:uid(),topic}).select().single();if(error)throw error;return data},
       async delParking(id){const {error}=await db.from('parking_lot').delete().eq('id',id);if(error)throw error},
       async warRuns(){const {data,error}=await db.from('war_runs').select('*').order('started_at',{ascending:false});if(error)throw error;return data||[]},
@@ -150,8 +152,46 @@
     createRun:(obj)=>store.createWarRun(obj),
     updateRun:(id,patch)=>store.updateWarRun(id,patch),
     addEvent:(obj)=>store.addWarEvent(obj),
+    onComplete:(ctx)=>integrateWarResult(ctx),
     toast
   })||null;
+
+  async function integrateWarResult({incident,score,debrief,dbRun}){
+    if(!features.v5)throw new Error('migration_v5_required');
+    const validatedLevel=score.score>=95?5:score.score>=85?4:score.score>=70?3:score.score>=50?2:1;
+    const assessment=await store.saveWarAssessment({
+      track_id:incident.trackId,
+      module_id:incident.moduleId,
+      score:Number(score.score),
+      validated_level:validatedLevel,
+      summary:debrief.summary,
+      strengths:debrief.strengths||[],
+      gaps:debrief.gaps||[],
+      source_id:dbRun.id
+    });
+    const ai=assessments.findIndex(a=>a.source_type==='war_room'&&a.source_id===dbRun.id);
+    if(ai>=0)assessments[ai]=assessment;else assessments.push(assessment);
+
+    const old=recFor(incident.trackId,incident.moduleId)||{
+      track_id:incident.trackId,module_id:incident.moduleId,
+      lab_done:false,evidence_done:false,breakfix_done:false,portfolio_done:false,
+      assessment_score:null,validated_level:null
+    };
+    const bestScore=Math.max(Number(old.assessment_score||0),Number(score.score||0));
+    const bestLevel=Math.max(Number(old.validated_level||0),validatedLevel);
+    const progress=await store.upsertProgress({
+      ...old,
+      track_id:incident.trackId,
+      module_id:incident.moduleId,
+      breakfix_done:!!old.breakfix_done||Number(score.score)>=70,
+      assessment_score:bestScore||null,
+      validated_level:bestLevel||null
+    });
+    const pi=moduleProgress.findIndex(r=>r.track_id===incident.trackId&&r.module_id===incident.moduleId);
+    if(pi>=0)moduleProgress[pi]=progress;else moduleProgress.push(progress);
+    renderAll();
+    return {assessment,progress};
+  }
 
   function stepState(trackId,moduleId){
     const r=recFor(trackId,moduleId)||{};
@@ -275,11 +315,11 @@
 
   function renderAssessments(){
     const ready=allModules().filter(x=>{const s=stepState(x.track.id,x.module.id);return s.lab&&s.evidence&&s.breakfix&&!s.boss});const passed=assessments.filter(a=>Number(a.score)>=70),avg=assessments.length?Math.round(assessments.reduce((n,a)=>n+Number(a.score||0),0)/assessments.length):0;
-    $('#assessmentStats').innerHTML=[['Bosses vencidos',passed.length],['Disponíveis',ready.length],['Score médio',assessments.length?`${avg}%`:'—'],['Nível 4+',assessments.filter(a=>Number(a.validated_level)>=4).length]].map(([a,b])=>`<div class="stat-tile"><span>${a}</span><strong>${b}</strong></div>`).join('');
+    $('#assessmentStats').innerHTML=[['Validações aprovadas',passed.length],['Bosses disponíveis',ready.length],['Score médio',assessments.length?`${avg}%`:'—'],['Nível 4+',assessments.filter(a=>Number(a.validated_level)>=4).length]].map(([a,b])=>`<div class="stat-tile"><span>${a}</span><strong>${b}</strong></div>`).join('');
     const candidates=ready.length?ready:allModules().filter(x=>moduleStatus(x.track,x.index)==='current').slice(0,3);
     $('#bossGrid').innerHTML=candidates.map(x=>{const st=stepState(x.track.id,x.module.id),available=st.lab&&st.evidence&&st.breakfix;return `<article class="boss-card ${available?'available':''}"><div class="boss-icon">⚔</div><span class="boss-difficulty">${available?'BOSS AVAILABLE':'PREPARE A MISSÃO'}</span><h3>${escapeHtml(x.module.title)}</h3><p>${escapeHtml(x.track.label)} · conceito + prática + diagnóstico + explicação</p><button class="btn ${available?'btn-danger':'btn-ghost'}" data-boss="${x.track.id}|${x.module.id}" ${available?'':'disabled'}>${available?'COPIAR PARA O CHAT':'BLOQUEADO'}</button></article>`}).join('');
     $$('[data-boss]').forEach(b=>{if(!b.disabled)b.onclick=()=>{const [t,m]=b.dataset.boss.split('|');exportAssessmentContext(t,m)}});
-    $('#assessmentHistory').innerHTML=assessments.length?[...assessments].reverse().map(a=>{const t=track(a.track_id),m=t?.modules.find(x=>x.id===a.module_id);return `<div class="assessment-row"><strong>${escapeHtml(m?.title||a.module_id)}</strong><span>${escapeHtml(t?.short||a.track_id)}</span><span class="assessment-score">${a.score}%</span><span>Nível ${a.validated_level||'—'} · ${fmtDate(a.created_at)}</span></div>`}).join(''):'<div class="panel" style="padding:14px"><p class="muted">Nenhuma Boss Battle registrada ainda.</p></div>';
+    $('#assessmentHistory').innerHTML=assessments.length?[...assessments].reverse().map(a=>{const t=track(a.track_id),m=t?.modules.find(x=>x.id===a.module_id),source=a.source_type==='war_room'?'WAR ROOM':'CHAT';return `<div class="assessment-row"><strong>${escapeHtml(m?.title||a.module_id)} <small class="assessment-source">${source}</small></strong><span>${escapeHtml(t?.short||a.track_id)}</span><span class="assessment-score">${a.score}%</span><span>Nível ${a.validated_level||'—'} · ${fmtDate(a.created_at)}</span></div>`}).join(''):'<div class="panel" style="padding:14px"><p class="muted">Nenhuma avaliação registrada ainda.</p></div>';
   }
 
   async function importAssessment(obj){
@@ -304,6 +344,9 @@
     if(moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length)insights.push(['','Conhecimento ainda não virou portfólio',`${moduleProgress.filter(r=>r.evidence_done&&!r.portfolio_done).length} módulo(s) têm evidência e ainda não têm artefato Git.`]);
     if(aws>dba*2&&dba>0)insights.push(['','AWS está puxando a semana','Natural no horário de trabalho. Preserve ao menos um bloco de DBA fora do expediente.']);
     if(practical&&practical===ss.length)insights.push(['good','100% das sessões foram práticas','O padrão execução > planejamento está funcionando neste período.']);
+    const latestWar=[...assessments].filter(a=>a.source_type==='war_room').sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+    if(latestWar?.gaps?.length)insights.push(['warn','War Room encontrou um gap',String(latestWar.gaps[0])]);
+    else if(latestWar&&Number(latestWar.score)>=85)insights.push(['good','War Room validou autonomia prática',`Último incidente: ${latestWar.score}% e nível ${latestWar.validated_level||'—'}.`]);
     if(!insights.length)insights.push(['good','Baseline sendo construído','Continue registrando sessões; os padrões ficam melhores com mais amostra.']);
     $('#reportInsights').innerHTML=insights.map(([tone,title,text])=>`<article class="insight-card ${tone}"><h4>${title}</h4><p>${text}</p></article>`).join('');
   }
