@@ -46,6 +46,11 @@ const debrief=Incident.debrief(run,score);
 assert.ok(debrief.rootCause.includes('sessão 57'));
 assert.ok(debrief.strengths.length >= 4);
 
+const strongRecall=Incident.recallPlan(run);
+assert.equal(strongRecall.length,3);
+assert.ok(strongRecall.every(x=>x.dueInDays>0),'strong path should schedule retention later');
+assert.deepEqual(new Set(strongRecall.map(x=>x.itemId)),new Set(['recall-dba04-01','recall-dba04-02','recall-dba04-03']));
+
 let unsafe=Engine.createRun(Incident,{runId:'unsafe'});
 unsafe=Engine.applyAction(Incident,unsafe,'restart_sql').run;
 assert.equal(unsafe.resolved,true);
@@ -53,5 +58,9 @@ assert.equal(unsafe.result.outcome,'mitigated_with_avoidable_outage');
 const unsafeScore=Incident.score(unsafe,Scoring);
 assert.ok(unsafeScore.score < score.score);
 assert.ok(unsafeScore.business < 30);
+
+const unsafeRecall=Incident.recallPlan(unsafe);
+assert.ok(unsafeRecall.length >= 3);
+assert.ok(unsafeRecall.every(x=>x.dueInDays===0),'unsafe path should schedule immediate targeted review');
 
 console.log('warroom-incident.test.js: all assertions passed');
