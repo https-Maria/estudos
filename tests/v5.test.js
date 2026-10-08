@@ -53,3 +53,13 @@ for (const id of ['topBackfillBtn','dbIssueBanner','openBackfillBtn','backfillFo
 for (const token of ['displayMission()','emailRedirectTo','addAnother=e.submitter','permission denied','⏱ CONTINUAR']) {
   assert.ok(app.includes(token), 'V5.2 missing behavior ' + token);
 }
+
+
+for (const asset of ['warroom/engine.js','warroom/scoring.js','warroom/incidents.js']) {
+  assert.ok(html.includes('./' + asset), 'War Room foundation missing asset ' + asset);
+}
+for (const id of ['warroomView','warroomCount']) {
+  assert.ok(ids.includes(id), 'War Room foundation missing UI element ' + id);
+}
+assert.ok(app.includes("renderWarRoom()"), 'War Room foundation is not wired into renderAll');
+assert.ok(app.includes("warroom:'WAR ROOM'"), 'War Room breadcrumb is missing');
