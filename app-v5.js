@@ -5,6 +5,9 @@
   const WRE = window.ForgeWarRoomEngine;
   const WRS = window.ForgeWarRoomScoring;
   const WRC = window.ForgeWarRoomController;
+  const RE = window.ForgeRecallEngine;
+  const RB = window.ForgeRecallItems;
+  const RC = window.ForgeRecallController;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const qs = new URLSearchParams(location.search);
@@ -65,7 +68,7 @@
   }
 
   function makeDemo() {
-    const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[],warRuns:[],warEvents:[]};
+    const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[],warRuns:[],warEvents:[],recallProgress:[],recallAttempts:[]};
     const areas=['DBA / DP-300','AWS / Data Lake','Inglês'];
     for(let i=1;i<=80;i++){
       if(i%4===0||i%7===0){
@@ -107,7 +110,11 @@
         async warRuns(){return [...d.warRuns].sort((a,b)=>new Date(b.started_at)-new Date(a.started_at))},
         async createWarRun(obj){const row={...obj,id:`wr-${Date.now()}`,user_id:'demo',started_at:new Date().toISOString(),created_at:new Date().toISOString(),updated_at:new Date().toISOString()};d.warRuns.unshift(row);return row},
         async updateWarRun(id,patch){const x=d.warRuns.find(r=>r.id===id);if(!x)throw new Error('War Room run não encontrado.');Object.assign(x,patch);return x},
-        async addWarEvent(obj){const row={...obj,id:`we-${Date.now()}-${obj.sequence}`,user_id:'demo',created_at:new Date().toISOString()};d.warEvents.push(row);return row}
+        async addWarEvent(obj){const row={...obj,id:`we-${Date.now()}-${obj.sequence}`,user_id:'demo',created_at:new Date().toISOString()};d.warEvents.push(row);return row},
+        async recallProgress(){return [...d.recallProgress]},
+        async recallAttempts(){return [...d.recallAttempts].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))},
+        async addRecallAttempt(obj){const row={...obj,id:`ra-${Date.now()}-${Math.random().toString(16).slice(2)}`,user_id:'demo',created_at:new Date().toISOString()};d.recallAttempts.unshift(row);return row},
+        async upsertRecallProgress(obj){let row=d.recallProgress.find(x=>x.item_id===obj.item_id);if(row)Object.assign(row,obj,{updated_at:new Date().toISOString()});else{row={...obj,id:`rp-${Date.now()}`,user_id:'demo',created_at:new Date().toISOString(),updated_at:new Date().toISOString()};d.recallProgress.push(row)}return row}
       };
     }
 
@@ -140,7 +147,11 @@
       async warRuns(){const {data,error}=await db.from('war_runs').select('*').order('started_at',{ascending:false});if(error)throw error;return data||[]},
       async createWarRun(obj){const {data,error}=await db.from('war_runs').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
       async updateWarRun(id,patch){const {data,error}=await db.from('war_runs').update(patch).eq('id',id).select().single();if(error)throw error;return data},
-      async addWarEvent(obj){const {data,error}=await db.from('war_events').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data}
+      async addWarEvent(obj){const {data,error}=await db.from('war_events').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
+      async recallProgress(){const {data,error}=await db.from('recall_progress').select('*').order('next_review_at',{ascending:true});if(error)throw error;return data||[]},
+      async recallAttempts(){const {data,error}=await db.from('recall_attempts').select('*').order('created_at',{ascending:false}).limit(200);if(error)throw error;return data||[]},
+      async addRecallAttempt(obj){const {data,error}=await db.from('recall_attempts').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
+      async upsertRecallProgress(obj){const payload={...obj,user_id:uid(),updated_at:new Date().toISOString()};const {data,error}=await db.from('recall_progress').upsert(payload,{onConflict:'user_id,item_id'}).select().single();if(error)throw error;return data}
     };
   }
   const store=createStore();
@@ -153,6 +164,17 @@
     updateRun:(id,patch)=>store.updateWarRun(id,patch),
     addEvent:(obj)=>store.addWarEvent(obj),
     onComplete:(ctx)=>integrateWarResult(ctx),
+    toast
+  })||null;
+
+  const recallController=RC?.createController({
+    engine:RE,
+    bank:RB,
+    listProgress:()=>store.recallProgress(),
+    listAttempts:()=>store.recallAttempts(),
+    addAttempt:(obj)=>store.addRecallAttempt(obj),
+    upsertProgress:(obj)=>store.upsertRecallProgress(obj),
+    onChanged:async()=>{},
     toast
   })||null;
 
@@ -226,7 +248,8 @@
     renderAll();
   }
 
-  function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderWarRoom();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
+  function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderRecall();renderWarRoom();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
+  function renderRecall(){if(recallController)recallController.render()}
   function renderWarRoom(){if(warController)warController.render();else if($('#warroomCount'))$('#warroomCount').textContent=String(WRI?.listIncidents?.().length||0)}
   function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
@@ -360,7 +383,7 @@
   function renderHistory(){const rows=[...sessions].filter(s=>s.finished_at).sort((a,b)=>new Date(b.started_at)-new Date(a.started_at)).slice(0,80);$('#historyList').innerHTML=`<div class="history-head"><span>Data</span><span>Mundo</span><span>Missão</span><span>Tempo</span><span>Humor</span><span>Prática</span></div>`+(rows.length?rows.map(s=>`<div class="history-row"><span>${fmtDate(s.started_at)}</span><span>${escapeHtml(s.area)}</span><strong>${escapeHtml(s.task_title||'Sessão')}</strong><span>${A.minutes(s)}m</span><span>${s.mood==='sim'?'😄':s.mood==='nao'?'💀':'😐'}</span><span>${s.practical_done?'✓':'○'}${s.notes==='Registro retroativo pelo FORGE'?' · retro':''}</span></div>`).join(''):'<p class="muted" style="padding:12px">Nenhuma sessão encerrada ainda.</p>')}
   function renderParking(){$('#parkingList').innerHTML=parking.length?parking.map(x=>`<div class="parking-item"><span>${escapeHtml(x.topic)}</span><button data-del-parking="${x.id}">×</button></div>`).join(''):'<p class="muted">Nada estacionado.</p>';$$('[data-del-parking]').forEach(b=>b.onclick=async()=>{await store.delParking(b.dataset.delParking);await refresh()})}
 
-  function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',warroom:'WAR ROOM',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
+  function setView(name,trackId=null){$$('.view').forEach(v=>v.classList.add('hidden'));$(`#${name}View`)?.classList.remove('hidden');$$('.nav-item').forEach(n=>n.classList.toggle('active',trackId?n.dataset.track===trackId:n.dataset.view===name));const labels={home:'INÍCIO',journey:'MAPA DA JORNADA',today:'MODO EXECUÇÃO',recall:'RECALL',warroom:'WAR ROOM',assessments:'AVALIAÇÕES',reports:'RELATÓRIOS',portfolio:'PORTFÓLIO',history:'HISTÓRICO',parking:'DEPOIS',track:trackId?track(trackId).label.toUpperCase():'MUNDO'};$('#breadcrumb').textContent=`FORGE / ${labels[name]||name.toUpperCase()}`}
 
   function friendlyAuthError(err){
     const msg=String(err?.message||err||'Erro de autenticação');
@@ -488,7 +511,7 @@
   async function enter(u){
     user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#dbIssueBanner')?.classList.add('hidden');
     try{
-      await store.seed(u.id);await refresh();if(warController)await warController.mount();setView('home');
+      await store.seed(u.id);await refresh();if(warController)await warController.mount();if(recallController)await recallController.mount();setView('home');
       if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700);
     }catch(err){
       console.error(err);
