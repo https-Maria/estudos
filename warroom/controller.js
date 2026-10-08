@@ -298,7 +298,7 @@
           }
         }
         render();
-        if(run.resolved)opts.toast(activeDbRun?.integrated_at?'Incidente encerrado e integrado à sua trilha.':'Incidente encerrado. Debrief liberado.');
+        if(run.resolved)opts.toast(activeDbRun?.integrated_at?'Incidente encerrado. Trilha e Recall atualizados.':'Incidente encerrado. Debrief liberado.');
       }catch(err){opts.toast(err.message||String(err))}
       finally{busy=false}
     }
