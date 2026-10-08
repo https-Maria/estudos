@@ -197,7 +197,20 @@
       }).join(''):'<p class="muted">Nenhuma revisão registrada ainda.</p>';
     }
 
-    return {mount:refresh,refresh,render};
+    function openModule(trackId,moduleId){
+      selectedTrack=trackId;
+      const items=Bank.byModule(trackId,moduleId);
+      const queue=Engine.dueItems(items,progress,new Date(),50);
+      activeId=(queue[0]?.item||items[0])?.id||null;
+      revealed=false;draftAnswer='';lastFeedback=null;
+      render();
+    }
+
+    function snapshot(){
+      return {progress:[...progress],attempts:[...attempts],selectedTrack,activeId};
+    }
+
+    return {mount:refresh,refresh,render,openModule,snapshot};
   }
 
   return {createController};
