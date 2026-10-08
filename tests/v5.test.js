@@ -63,3 +63,14 @@ for (const id of ['warroomView','warroomCount']) {
 }
 assert.ok(app.includes("renderWarRoom()"), 'War Room foundation is not wired into renderAll');
 assert.ok(app.includes("warroom:'WAR ROOM'"), 'War Room breadcrumb is missing');
+
+
+for (const asset of ['warroom/incidents/dba-blocking-01.js','warroom/controller.js']) {
+  assert.ok(html.includes('./' + asset), 'War Room V5.4 missing asset ' + asset);
+}
+for (const id of ['warroomCatalog','warroomWorkspace']) {
+  assert.ok(ids.includes(id), 'War Room V5.4 missing UI element ' + id);
+}
+for (const token of ['createWarRun','updateWarRun','addWarEvent','warController.mount']) {
+  assert.ok(app.includes(token), 'War Room V5.4 persistence missing ' + token);
+}
