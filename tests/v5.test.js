@@ -80,3 +80,8 @@ for (const token of ['saveWarAssessment','integrateWarResult','onComplete:(ctx)=
   assert.ok(app.includes(token), 'War Room V5.5 learning integration missing ' + token);
 }
 assert.ok(css.includes('.assessment-source'), 'War Room V5.5 assessment source style missing');
+
+
+for (const id of ['warroomHistory']) {
+  assert.ok(ids.includes(id), 'War Room V5.5 missing attempt history UI ' + id);
+}
