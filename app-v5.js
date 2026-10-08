@@ -201,6 +201,35 @@
     toast
   })||null;
 
+  async function scheduleRecallFromWar(incident,run){
+    const plan=typeof incident.recallPlan==='function'?incident.recallPlan(run):[];
+    const scheduled=[];
+    for(const target of plan){
+      const item=RB?.get?.(target.itemId);
+      if(!item)continue;
+      const existing=recallProgress.find(p=>p.item_id===item.id)||null;
+      const due=new Date(Date.now()+Math.max(0,Number(target.dueInDays||0))*DAY).toISOString();
+      const keepExisting=existing?.next_review_at&&new Date(existing.next_review_at).getTime()<=new Date(due).getTime();
+      const payload={
+        item_id:item.id,
+        track_id:item.trackId,
+        module_id:item.moduleId,
+        stage:Number(existing?.stage||0),
+        stability:Number(existing?.stability||0),
+        attempts:Number(existing?.attempts||0),
+        successes:Number(existing?.successes||0),
+        last_grade:existing?.last_grade??null,
+        last_answered_at:existing?.last_answered_at??null,
+        next_review_at:keepExisting?existing.next_review_at:due
+      };
+      const saved=await store.upsertRecallProgress(payload);
+      const ri=recallProgress.findIndex(p=>p.item_id===item.id);
+      if(ri>=0)recallProgress[ri]=saved;else recallProgress.push(saved);
+      scheduled.push({itemId:item.id,nextReviewAt:saved.next_review_at,reason:target.reason||null});
+    }
+    return scheduled;
+  }
+
   async function integrateWarResult({incident,score,debrief,dbRun}){
     if(!features.v5)throw new Error('migration_v5_required');
     const validatedLevel=score.score>=95?5:score.score>=85?4:score.score>=70?3:score.score>=50?2:1;
@@ -234,8 +263,9 @@
     });
     const pi=moduleProgress.findIndex(r=>r.track_id===incident.trackId&&r.module_id===incident.moduleId);
     if(pi>=0)moduleProgress[pi]=progress;else moduleProgress.push(progress);
+    const recallScheduled=await scheduleRecallFromWar(incident,dbRun.runtime||{});
     renderAll();
-    return {assessment,progress};
+    return {assessment,progress,recallScheduled};
   }
 
   function stepState(trackId,moduleId){
