@@ -13,7 +13,7 @@ new Function(app);
 const ids = [...html.matchAll(/id="([^"]+)"/g)].map(m => m[1]);
 assert.equal(ids.length, new Set(ids).size, 'HTML contains duplicate ids');
 
-const dynamic = new Set(['roomStartBtn', 'bossExportBtn']);
+const dynamic = new Set(['roomStartBtn', 'bossExportBtn', 'openRecallModuleBtn']);
 const refs = [...app.matchAll(/\$\((['"])(#[A-Za-z0-9_-]+)\1\)/g)].map(m => m[2].slice(1));
 const missing = [...new Set(refs.filter(id => !ids.includes(id) && !dynamic.has(id)))];
 assert.deepEqual(missing, [], 'app-v5 references missing HTML ids');
@@ -99,3 +99,13 @@ for (const token of ['recallProgress','recallAttempts','addRecallAttempt','upser
 for (const token of ['.recall-layout','.recall-queue-item','.recall-rubric']) {
   assert.ok(css.includes(token), 'Recall V5.6 style missing ' + token);
 }
+
+
+for (const token of ['recallSignal','recallDueForTrack','totalRecallDue','openRecallModuleBtn','Conhecimento pedindo revisão']) {
+  assert.ok(app.includes(token), 'Recall V5.7 competency-map signal missing ' + token);
+}
+for (const token of ['.recall-signal','.module-card.recall-due','.room-step.warn']) {
+  assert.ok(css.includes(token), 'Recall V5.7 competency-map style missing ' + token);
+}
+const modulePercentSource = app.slice(app.indexOf('function modulePercent'), app.indexOf('function moduleXp'));
+assert.ok(!modulePercentSource.includes('recallSignal'), 'Recall must not reduce or rewrite earned module progress');
