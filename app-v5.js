@@ -2,6 +2,9 @@
   const A = window.StudyAnalytics;
   const C = window.StudyCurriculum;
   const WRI = window.ForgeWarRoomIncidents;
+  const WRE = window.ForgeWarRoomEngine;
+  const WRS = window.ForgeWarRoomScoring;
+  const WRC = window.ForgeWarRoomController;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const qs = new URLSearchParams(location.search);
@@ -62,7 +65,7 @@
   }
 
   function makeDemo() {
-    const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[]};
+    const d={sessions:[],evidence:[],competencies:[],parking:[],progress:[],assessments:[],warRuns:[],warEvents:[]};
     const areas=['DBA / DP-300','AWS / Data Lake','Inglês'];
     for(let i=1;i<=80;i++){
       if(i%4===0||i%7===0){
@@ -99,7 +102,11 @@
         async upsertProgress(obj){let x=d.progress.find(r=>r.track_id===obj.track_id&&r.module_id===obj.module_id); if(x)Object.assign(x,obj,{updated_at:new Date().toISOString()}); else {x={...obj,id:`p-${Date.now()}`,updated_at:new Date().toISOString()};d.progress.push(x);} return x;},
         async addAssessment(obj){const row={...obj,id:`a-${Date.now()}`,created_at:new Date().toISOString()}; d.assessments.push(row); return row;},
         async addParking(topic){const row={id:`pk-${Date.now()}`,user_id:'demo',topic,created_at:new Date().toISOString()}; d.parking.push(row); return row;},
-        async delParking(id){d.parking=d.parking.filter(x=>x.id!==id)}
+        async delParking(id){d.parking=d.parking.filter(x=>x.id!==id)},
+        async warRuns(){return [...d.warRuns].sort((a,b)=>new Date(b.started_at)-new Date(a.started_at))},
+        async createWarRun(obj){const row={...obj,id:`wr-${Date.now()}`,user_id:'demo',started_at:new Date().toISOString(),created_at:new Date().toISOString(),updated_at:new Date().toISOString()};d.warRuns.unshift(row);return row},
+        async updateWarRun(id,patch){const x=d.warRuns.find(r=>r.id===id);if(!x)throw new Error('War Room run não encontrado.');Object.assign(x,patch);return x},
+        async addWarEvent(obj){const row={...obj,id:`we-${Date.now()}-${obj.sequence}`,user_id:'demo',created_at:new Date().toISOString()};d.warEvents.push(row);return row}
       };
     }
 
@@ -127,10 +134,24 @@
       async upsertProgress(obj){if(!features.v5)throw new Error('migration_v5_required');const payload={...obj,user_id:uid(),updated_at:new Date().toISOString()};const {data,error}=await db.from('module_progress').upsert(payload,{onConflict:'user_id,track_id,module_id'}).select().single();if(error)throw error;return data},
       async addAssessment(obj){if(!features.v5)throw new Error('migration_v5_required');const {data,error}=await db.from('assessments').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
       async addParking(topic){const {data,error}=await db.from('parking_lot').insert({user_id:uid(),topic}).select().single();if(error)throw error;return data},
-      async delParking(id){const {error}=await db.from('parking_lot').delete().eq('id',id);if(error)throw error}
+      async delParking(id){const {error}=await db.from('parking_lot').delete().eq('id',id);if(error)throw error},
+      async warRuns(){const {data,error}=await db.from('war_runs').select('*').order('started_at',{ascending:false});if(error)throw error;return data||[]},
+      async createWarRun(obj){const {data,error}=await db.from('war_runs').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data},
+      async updateWarRun(id,patch){const {data,error}=await db.from('war_runs').update(patch).eq('id',id).select().single();if(error)throw error;return data},
+      async addWarEvent(obj){const {data,error}=await db.from('war_events').insert({...obj,user_id:uid()}).select().single();if(error)throw error;return data}
     };
   }
   const store=createStore();
+  const warController=WRC?.createController({
+    engine:WRE,
+    scoring:WRS,
+    incidents:WRI,
+    listRuns:()=>store.warRuns(),
+    createRun:(obj)=>store.createWarRun(obj),
+    updateRun:(id,patch)=>store.updateWarRun(id,patch),
+    addEvent:(obj)=>store.addWarEvent(obj),
+    toast
+  })||null;
 
   function stepState(trackId,moduleId){
     const r=recFor(trackId,moduleId)||{};
@@ -166,7 +187,7 @@
   }
 
   function renderAll(){renderProfile();renderHome();renderJourney();renderToday();renderWarRoom();renderAssessments();renderReports();renderPortfolio();renderHistory();renderParking();renderSessionState()}
-  function renderWarRoom(){if($('#warroomCount'))$('#warroomCount').textContent=String(WRI?.listIncidents?.().length||0)}
+  function renderWarRoom(){if(warController)warController.render();else if($('#warroomCount'))$('#warroomCount').textContent=String(WRI?.listIncidents?.().length||0)}
   function renderProfile(){const l=levelInfo();$('#homeLevel').textContent=l.level;$('#homeXp').textContent=`${l.xp} XP`;$('#sidebarRank').textContent=`${l.rank} · Lv. ${l.level}`;if($('#sidebarEmail'))$('#sidebarEmail').textContent=user?.email||'';$('#sidebarXpBar').style.width=`${l.pct}%`;const circumference=314;$('#levelRing').style.strokeDashoffset=String(circumference-(circumference*l.pct/100))}
 
   function renderHome(){
@@ -424,7 +445,7 @@
   async function enter(u){
     user=u;$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#dbIssueBanner')?.classList.add('hidden');
     try{
-      await store.seed(u.id);await refresh();setView('home');
+      await store.seed(u.id);await refresh();if(warController)await warController.mount();setView('home');
       if(!features.v5&&!DEMO)setTimeout(()=>toast('V5 carregada. Rode supabase_v5_migration.sql para salvar progresso RPG, Bosses e XP.'),700);
     }catch(err){
       console.error(err);
