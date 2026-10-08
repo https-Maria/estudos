@@ -274,18 +274,20 @@
 
       <section id="warroomView" class="view hidden">
         <div class="page-hero">
-          <div><span class="kicker">WAR ROOM</span><h2>Incidentes profissionais. Sem gabarito visível.</h2><p>Investigue, converse, escolha ações e lide com as consequências. A fundação do motor já está pronta; o primeiro chamado entra no próximo incremento.</p></div>
+          <div><span class="kicker">WAR ROOM</span><h2>Incidentes profissionais. Sem gabarito visível.</h2><p>Investigue por evidências, comunique impacto, escolha ações e lide com as consequências.</p></div>
           <div class="page-stat"><strong id="warroomCount">0</strong><span>incidentes disponíveis</span></div>
         </div>
-        <div class="warroom-foundation-grid">
-          <article class="panel warroom-foundation-card"><span class="kicker">MOTOR</span><h3>Máquina de estados</h3><p>Ações têm pré-requisitos, custo de tempo, consequências e evidências desbloqueáveis.</p></article>
-          <article class="panel warroom-foundation-card"><span class="kicker">AVALIAÇÃO</span><h3>4 dimensões</h3><p>Técnica, Comunicação, Arquitetura e Negócio serão avaliadas separadamente.</p></article>
-          <article class="panel warroom-foundation-card"><span class="kicker">HISTÓRICO</span><h3>Decisões rastreáveis</h3><p>Cada tentativa será registrada como run + eventos, preservando a linha de investigação.</p></article>
+
+        <div class="section-head compact">
+          <div><span class="kicker">FILA</span><h3>Chamados disponíveis</h3></div>
+          <span class="section-note">um cenário completo antes de ampliar o catálogo</span>
         </div>
-        <article class="panel warroom-empty">
-          <div class="warroom-empty-icon">☣</div>
-          <div><span class="kicker">PRÓXIMO INCREMENTO</span><h3>DBA-WR-001 · Sistema lento por blocking</h3><p>O catálogo continua vazio de propósito até o primeiro incidente estar completo e tecnicamente validado.</p></div>
-        </article>
+        <div id="warroomCatalog" class="war-catalog"></div>
+
+        <div class="section-head compact war-workspace-head">
+          <div><span class="kicker">SALA DE INCIDENTE</span><h3>Investigação ativa</h3></div>
+        </div>
+        <div id="warroomWorkspace"></div>
       </section>
 
       <section id="assessmentsView" class="view hidden">
@@ -442,6 +444,8 @@
   <script src="./warroom/engine.js"></script>
   <script src="./warroom/scoring.js"></script>
   <script src="./warroom/incidents.js"></script>
+  <script src="./warroom/incidents/dba-blocking-01.js"></script>
+  <script src="./warroom/controller.js"></script>
   <script src="./app-v5.js"></script>
 </body>
 </html>
