@@ -71,6 +71,7 @@
         <button class="nav-item nav-english" data-track="english"><span class="nav-icon">◎</span>Technical English</button>
 
         <span class="nav-label">VALIDAÇÃO</span>
+        <button class="nav-item" data-view="warroom"><span class="nav-icon">☣</span>War Room</button>
         <button class="nav-item" data-view="assessments"><span class="nav-icon">⚔</span>Avaliações</button>
         <button class="nav-item" data-view="reports"><span class="nav-icon">⌁</span>Relatórios</button>
         <button class="nav-item" data-view="portfolio"><span class="nav-icon">▤</span>Portfólio</button>
@@ -271,6 +272,22 @@
         </div>
       </section>
 
+      <section id="warroomView" class="view hidden">
+        <div class="page-hero">
+          <div><span class="kicker">WAR ROOM</span><h2>Incidentes profissionais. Sem gabarito visível.</h2><p>Investigue, converse, escolha ações e lide com as consequências. A fundação do motor já está pronta; o primeiro chamado entra no próximo incremento.</p></div>
+          <div class="page-stat"><strong id="warroomCount">0</strong><span>incidentes disponíveis</span></div>
+        </div>
+        <div class="warroom-foundation-grid">
+          <article class="panel warroom-foundation-card"><span class="kicker">MOTOR</span><h3>Máquina de estados</h3><p>Ações têm pré-requisitos, custo de tempo, consequências e evidências desbloqueáveis.</p></article>
+          <article class="panel warroom-foundation-card"><span class="kicker">AVALIAÇÃO</span><h3>4 dimensões</h3><p>Técnica, Comunicação, Arquitetura e Negócio serão avaliadas separadamente.</p></article>
+          <article class="panel warroom-foundation-card"><span class="kicker">HISTÓRICO</span><h3>Decisões rastreáveis</h3><p>Cada tentativa será registrada como run + eventos, preservando a linha de investigação.</p></article>
+        </div>
+        <article class="panel warroom-empty">
+          <div class="warroom-empty-icon">☣</div>
+          <div><span class="kicker">PRÓXIMO INCREMENTO</span><h3>DBA-WR-001 · Sistema lento por blocking</h3><p>O catálogo continua vazio de propósito até o primeiro incidente estar completo e tecnicamente validado.</p></div>
+        </article>
+      </section>
+
       <section id="assessmentsView" class="view hidden">
         <div class="page-hero">
           <div><span class="kicker">BOSS BATTLES</span><h2>Conhecimento precisa sobreviver ao teste.</h2><p>Teoria, prática, diagnóstico e explicação.</p></div>
@@ -422,6 +439,9 @@
   <script src="./config.js"></script>
   <script src="./analytics.js"></script>
   <script src="./curriculum.js"></script>
+  <script src="./warroom/engine.js"></script>
+  <script src="./warroom/scoring.js"></script>
+  <script src="./warroom/incidents.js"></script>
   <script src="./app-v5.js"></script>
 </body>
 </html>
