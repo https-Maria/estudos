@@ -346,8 +346,29 @@
   function renderTrack(id){
     const t=track(id),pct=trackPercent(t);$('#trackSources').innerHTML=t.sources.map(s=>`<span>${escapeHtml(s)}</span>`).join('');$('#trackKicker').textContent=`MUNDO · ${t.short.toUpperCase()}`;$('#trackTitle').textContent=t.label;$('#trackDescription').textContent=t.description;$('#trackPercent').textContent=`${pct}%`;
     if(id==='aws')renderPipeline(t);else if(id==='dba')renderDbaTree(t);else renderEnglishTree(t);
-    $('#trackModules').innerHTML=t.modules.map((m,i)=>{const p=modulePercent(t.id,m.id),status=moduleStatus(t,i),st=stepState(t.id,m.id),rs=recallSignal(t.id,m.id);return `<button class="module-card ${status} ${rs.kind==='due'?'recall-due':''}" data-module="${m.id}"><div class="module-head"><div><span class="module-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'PRÓXIMO'}${rs.kind==='due'?' · ↻ REVISAR':''}</span><h3>${String(i+1).padStart(2,'0')} · ${escapeHtml(m.title)}</h3></div><b>${p}%</b></div><p>${escapeHtml(m.mission)}</p><div class="module-progress"><div style="width:${p}%"></div></div><div class="module-foot"><span>${rs.label?`<em class="recall-signal ${rs.kind}">${escapeHtml(rs.label)}</em> · `:''}${st.boss?'★ validado':st.breakfix?'⚔ break/fix feito':st.lab?'lab feito':'não iniciado'}</span><b>${moduleXp(t.id,m.id)} XP</b></div></button>`}).join('');
-    $$('#trackModules [data-module]').forEach(b=>b.onclick=()=>openMission(id,b.dataset.module));
+    const projectsHtml=(t.projects||[]).map(project=>{
+      const key='forge-project-v1-'+project.id;
+      let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{}
+      const count=project.phases.reduce((n,p)=>n+p.tasks.length,0);
+      const finished=project.phases.reduce((n,p,i)=>n+p.tasks.filter((_,j)=>saved[i+'-'+j]).length,0);
+      return `<section class="room-section" style="margin-bottom:24px;border:1px solid var(--border, #43465b);border-radius:16px;padding:20px" data-project="${escapeHtml(project.id)}">
+        <div class="room-section-head"><span>PROJETO DENTRO DA TRILHA AWS</span><b>${finished}/${count} tarefas · ${Math.round(finished/count*100)}%</b></div>
+        <h3>${escapeHtml(project.title)}</h3><p>${escapeHtml(project.summary)}</p><p><strong>Contexto preservado:</strong> ${escapeHtml(project.existing)}</p>
+        <details><summary>Diretrizes da reunião (16/10/2026)</summary><ul>${project.principles.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul></details>
+        <div style="height:8px;background:#323440;border-radius:8px;overflow:hidden;margin:14px 0"><div style="height:100%;width:${Math.round(finished/count*100)}%;background:#f59e0b"></div></div>
+        ${project.phases.map((phase,i)=>`<details style="padding:10px 0;border-top:1px solid #43465b" ${i===1?'open':''}><summary style="cursor:pointer;font-weight:700">${String(i+1).padStart(2,'0')} · ${escapeHtml(phase.title)} (${phase.tasks.filter((_,j)=>saved[i+'-'+j]).length}/${phase.tasks.length})</summary><div style="display:grid;gap:10px;padding:12px 0">${phase.tasks.map((task,j)=>`<label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer"><input type="checkbox" data-project-task="${i}-${j}" ${saved[i+'-'+j]?'checked':''} style="margin-top:4px"><span>${escapeHtml(task)}</span></label>`).join('')}</div></details>`).join('')}
+        <p style="font-size:.8rem;opacity:.72;margin-top:12px">Este checklist é complementar e fica salvo neste navegador. A timeline, as sessões e o progresso dos módulos existentes não são alterados.</p>
+      </section>`;
+    }).join('');
+    $('#trackModules').innerHTML=projectsHtml+t.modules.map((m,i)=>{const p=modulePercent(t.id,m.id),status=moduleStatus(t,i),st=stepState(t.id,m.id),rs=recallSignal(t.id,m.id);return `<button class="module-card ${status} ${rs.kind==='due'?'recall-due':''}" data-module="${m.id}"><div class="module-head"><div><span class="module-status">${status==='done'?'CONSTRUÍDO':status==='current'?'AGORA':'PRÓXIMO'}${rs.kind==='due'?' · ↻ REVISAR':''}</span><h3>${String(i+1).padStart(2,'0')} · ${escapeHtml(m.title)}</h3></div><b>${p}%</b></div><p>${escapeHtml(m.mission)}</p><div class="module-progress"><div style="width:${p}%"></div></div><div class="module-foot"><span>${rs.label?`<em class="recall-signal ${rs.kind}">${escapeHtml(rs.label)}</em> · `:''}${st.boss?'★ validado':st.breakfix?'⚔ break/fix feito':st.lab?'lab feito':'não iniciado'}</span><b>${moduleXp(t.id,m.id)} XP</b></div></button>`}).join('');
+    $('#trackModules [data-project-task]').forEach(input=>input.onchange=()=>{
+      const root=input.closest('[data-project]'),key='forge-project-v1-'+root.dataset.project;
+      let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{}
+      saved[input.dataset.projectTask]=input.checked;
+      try{localStorage.setItem(key,JSON.stringify(saved));}catch{}
+      renderTrack(id);
+    });
+    $('#trackModules [data-module]').forEach(b=>b.onclick=()=>openMission(id,b.dataset.module));
   }
   function renderDbaTree(t){$('#trackVisual').innerHTML=`<div class="dba-tree">${t.modules.map((m,i)=>{const rs=recallSignal(t.id,m.id);return `<button class="tree-node ${moduleStatus(t,i)} ${rs.kind==='due'?'recall-due':''}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')} · ${moduleStatus(t,i).toUpperCase()}${rs.kind==='due'?' · ↻ REVISAR':''}</span><strong>${escapeHtml(m.title)}</strong></button>`}).join('')}</div>`;$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
   function renderPipeline(t){$('#trackVisual').innerHTML=`<div class="pipeline">${t.modules.map((m,i)=>{const rs=recallSignal(t.id,m.id);return `${i?'<span class="pipeline-arrow">→</span>':''}<button class="pipeline-node ${moduleStatus(t,i)} ${rs.kind==='due'?'recall-due':''}" data-vmod="${m.id}"><span>${String(i+1).padStart(2,'0')}${rs.kind==='due'?' · ↻':''}</span><strong>${escapeHtml(m.title)}</strong></button>`}).join('')}</div>`;$('[data-vmod]').forEach(b=>b.onclick=()=>openMission(t.id,b.dataset.vmod))}
