@@ -115,6 +115,24 @@
       color:"orange",
       description:"Um único projeto prático do trabalho: consumir Bitrix no NiFi e levar os dados até S3, Glue, Athena e camadas Bronze/Silver/Gold com governança e orquestração.",
       sources:["Bitrix real","NiFi hands-on","Console AWS","Documentação técnica Git"],
+      projects:[{
+        id:"bitrix-dw-modelagem",
+        title:"Data Warehouse Bitrix24 — modelagem e indicadores",
+        summary:"Projeto prático dentro da trilha AWS / Data Lake. Um KPI por vez, com visão integrada do modelo estrela, draw.io e atenção à ausência de histórico retroativo no Bitrix.",
+        kickoff:"2026-10-16",
+        existing:"Já executado: NiFi consumindo API Bitrix, paginação de 50 registros, bucket fulltime-datalake-bronze / bitrix/leads/, descoberta de 18.077 leads na API. Conferir completude e qualidade antes de concluir a Bronze.",
+        principles:["Pergunta do usuário final antes da tecnologia","Matriz de indicadores antes das tabelas","Um KPI por vez, dimensões compartilhadas entre todos","Grão explícito em toda fato; evitar contagens duplicadas","Bitrix não fornece histórico recuperável nas recargas; não prometer histórico inexistente","Snapshots só retratam estados observados após sua implantação","Filtros no QuickSight/BI devem ser previstos no desenho","Modelo estrela na Gold; avaliar normalização na Silver","Desenhar e versionar fatos, dimensões e relacionamentos no draw.io"],
+        phases:[
+          {title:"Bronze — validação da ingestão",tasks:["Conferir os 18.077 leads informados pela API contra a carga completa","Validar paginação, duplicidades e arquivos armazenados no S3","Registrar data e hora da extração e documentar limites do histórico"]},
+          {title:"Perguntas do negócio",tasks:["Mapear quem utilizará os dashboards e para quais decisões","Levantar as perguntas que o usuário final precisa responder","Priorizar os KPIs para primeira entrega"]},
+          {title:"Matriz de indicadores",tasks:["Definir objetivo, fórmula, medida, fonte e responsável por cada KPI","Documentar granularidade e filtros para cada KPI","Classificar indicador como atual, observável a partir de agora ou histórico indisponível"]},
+          {title:"Modelo conceitual no draw.io",tasks:["Mapear SPA, leads, empresas, contatos, usuários, atividades e cardinalidades","Desenhar fatos, dimensões, PK, FK e grão no draw.io","Validar modelo estrela integrado, sem misturar granularidades"]},
+          {title:"Silver e qualidade",tasks:["Definir schemas, tipagem, chaves naturais e regras de deduplicação","Implementar limpeza, integridade e tabelas Silver","Definir cargas incrementais/snapshots com limitações explícitas"]},
+          {title:"Gold — modelo estrela",tasks:["Criar dimensões compartilhadas e surrogate keys","Implementar fato do primeiro KPI e testar agregações","Acrescentar novos KPIs sem duplicar dimensões ou inflar contagens"]},
+          {title:"Athena e QuickSight",tasks:["Catalogar e consultar as tabelas modeladas no Athena","Criar dashboard piloto com filtros previstos na matriz","Conferir valores e interpretação dos indicadores com o negócio"]},
+          {title:"Operação e documentação",tasks:["Documentar cargas, falhas, reprocessamento e qualidade","Registrar linhagem de campos, limitações e versão do draw.io","Validar entregáveis com usuários finais e planejar próximas melhorias"]}
+        ]
+      }],
       modules:[
         {
           id:"aws-01",title:"Bitrix → NiFi: primeira ingestão",skills:["S3"],
